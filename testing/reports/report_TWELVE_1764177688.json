@@ -1,0 +1,36 @@
+{
+    "actor_name": "TWELVE",
+    "aliases": [
+        "Shadow",
+        "Comet",
+        "DARKSTAR"
+    ],
+    "target_sector": [
+        "Коммерческий сектор",
+        "коммуникации",
+        "строительство",
+        "финансовые услуги",
+        "государственные учреждения"
+    ],
+    "malware_tools": [
+        "ADRecon",
+        "Advanced IP Scanner",
+        "AnyDesk",
+        "Babuk",
+        "Cobalt Strike",
+        "LockBit 3.0",
+        "Mimikatz",
+        "ngrok"
+    ],
+    "iocs": {
+        "ips": [
+            "103.14.26.208"
+        ],
+        "domains": [],
+        "hashes": []
+    },
+    "threat_level": "High",
+    "summary": "Группировка TWELVE, также известная как Shadow, Comet и DARKSTAR, является одной из наиболее активных хактивистских группировок в России, тарифицируемых в коммерческий сектор, коммуникации, строительство, финансовые услуги и государственные учреждения.",
+    "analysis_timestamp": "2025-11-26T20:21:28.516832",
+    "source_file": "report_twelve.txt"
+}

@@ -1,0 +1,36 @@
+{
+    "meta": {
+        "source_url": "https://therecord.media/cisa-urges-software-reviews-malicious-packages",
+        "scan_date": "2025-11-26T20:55:42.227454",
+        "model_used": "qwen2.5",
+        "engine": "Selenium + Chunking"
+    },
+    "intelligence": {
+        "threat_actor": "Unknown",
+        "targeted_countries": [],
+        "malware_family": [
+            "Shai-Hulud"
+        ],
+        "iocs": {
+            "ips": [],
+            "domains": [],
+            "hashes": []
+        },
+        "tactics": [
+            "Code injection",
+            "Stealing of GitHub Personal Access Tokens and API keys",
+            "自我复制",
+            "Credential theft",
+            "植入恶意代码",
+            "Automated spreading to infect other packages",
+            "Initial access via compromised maintainer account",
+            "Malware deployment to scan for sensitive credentials",
+            "传播代码",
+            "Self-replication",
+            "窃取敏感凭证",
+            "Uploading stolen credentials to public repositories"
+        ],
+        "threat_level": "High",
+        "summary": "CISA warned organizations about a supply chain compromise involving Shai-Hulud, a self-replicating worm that infected over 500 packages, targeting credentials like PATs and API keys. 黑客通过在开发人员依赖的软件构建块中植入恶意代码，发动了一种新型的供应链攻击，这种攻击还能够自我复制并传播。"
+    }
+}

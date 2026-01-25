@@ -1,0 +1,26 @@
+{
+    "meta": {
+        "source_url": "https://therecord.media/cisa-urges-software-reviews-malicious-packages",
+        "scan_date": "2025-11-26T20:30:15.476958",
+        "model_used": "qwen2.5"
+    },
+    "intelligence": {
+        "summary": "В ходе инцидента хакеры проникли в несколько сотен пакетов, используемых разработчиками для создания программного обеспечения, заражив их вредоносным вирусом Shai-Hulud. Малварь использовала украденные учетные данные и аутентификационные ключи для распространения кода через другие пакеты.",
+        "threat_actor": "Unknown",
+        "targeted_countries": [],
+        "malware_family": [
+            "Shai-Hulud"
+        ],
+        "iocs": {
+            "ips": [],
+            "domains": [],
+            "hashes": []
+        },
+        "tactics": [
+            "Supply chain compromise",
+            "Malware deployment",
+            "Credential theft"
+        ],
+        "threat_level": "High"
+    }
+}

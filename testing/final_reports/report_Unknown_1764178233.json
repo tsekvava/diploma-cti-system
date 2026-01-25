@@ -1,0 +1,23 @@
+{
+    "meta": {
+        "source_url": "https://cybersecurefox.com/ru/lockbit-ransomware-group-hacked-data-stolen/",
+        "scan_date": "2025-11-26T20:30:33.910389",
+        "model_used": "qwen2.5"
+    },
+    "intelligence": {
+        "summary": "В конце апреля 2025 года известная вымогательская группа LockBit подверглась хакерской атаке, в результате которой была украдена конфиденциальная информация из базы данных партнерской панели администратора. Хакер также оставил сообщение с призывом к законности, что может указывать на наличие общего актора.",
+        "threat_actor": "Unknown",
+        "targeted_countries": [],
+        "malware_family": [],
+        "iocs": {
+            "ips": [],
+            "domains": [],
+            "hashes": []
+        },
+        "tactics": [
+            "Phishing",
+            "Social Engineering"
+        ],
+        "threat_level": "Medium"
+    }
+}

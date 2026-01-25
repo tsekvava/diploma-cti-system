@@ -1,0 +1,23 @@
+{
+    "meta": {
+        "source_url": "https://www.securitylab.ru/news/566430.php",
+        "scan_date": "2025-11-26T20:42:50.528779",
+        "model_used": "qwen2.5",
+        "engine": "Selenium + Chunking"
+    },
+    "intelligence": {
+        "threat_actor": "Unknown",
+        "targeted_countries": [],
+        "malware_family": [],
+        "iocs": {
+            "ips": [
+                "46.16.131.61"
+            ],
+            "domains": [],
+            "hashes": []
+        },
+        "tactics": [],
+        "threat_level": "Low",
+        "summary": ""
+    }
+}
