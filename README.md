@@ -4,7 +4,7 @@
 
 ## Основные возможности
 
-1.  **AI Spam Filter**: Фильтрация шума и спама в Telegram-сообщениях (Fine-tuned Qwen 2.5-3B).
+1.  **AI Spam Filter**: Фильтрация шума и спама в Telegram-сообщениях (Fine-tuned Qwen 2.5-14B).
 2.  **Hybrid Extractor**: Извлечение сущностей (Threat Actors, Malware) и индикаторов (IP, Hash) с помощью Regex + LLM (Qwen 14B).
 3.  **RAG Engine**: Поиск исторического контекста и похожих инцидентов в векторной базе (ChromaDB).
 4.  **OpenCTI Integration**: Автоматический экспорт данных в платформу OpenCTI.
