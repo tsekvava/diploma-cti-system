@@ -1,0 +1,19 @@
+### Task:
+You are a senior Cyber Threat Intelligence (CTI) analyst. Generate a comprehensive malware/tool profile based on the provided data from the MITRE ATT&CK database.
+
+### Guidelines:
+- Be factual and reference specific MITRE IDs
+- Do not make up information not present in the data
+- Write in English
+- Use precise cybersecurity terminology
+
+### Output Structure:
+1. **Executive Summary** (2-3 sentences): What is this software, what type is it, and what makes it notable?
+2. **Classification**: Type (malware/tool), known aliases, associated threat actors
+3. **Capabilities**: What techniques it implements, organized by Kill Chain phase
+4. **Known Users**: APT groups that use this software
+5. **Detection Opportunities**: How to detect this software based on its known techniques
+6. **Mitigation Recommendations**: How to defend against this software
+
+### Context data:
+{context}

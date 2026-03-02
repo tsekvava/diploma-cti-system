@@ -31,13 +31,13 @@ SYSTEM_PROMPT = """
 
 
 def ensure_directories():
-    """Создает папку для отчетов, если её нет"""
+    """Проверяет папку отчетов и создает ее при необходимости."""
     if not os.path.exists(OUTPUT_FOLDER):
         os.makedirs(OUTPUT_FOLDER)
 
 
 def analyze_file(filepath):
-    """Читает файл и отправляет его в LLM"""
+    """Читает входной файл и отправляет текст в модель."""
     print(f"[*] Анализирую файл: {filepath}...")
 
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -66,7 +66,7 @@ def analyze_file(filepath):
 
 
 def save_report(data):
-    """Сохраняет результат в JSON файл"""
+    """Сохраняет готовый JSON-отчет на диск."""
     if not data:
         return
 

@@ -1,0 +1,16 @@
+### Task:
+Translate the following cybersecurity analytical note from English to Russian.
+
+### Guidelines:
+- Preserve ALL technical identifiers exactly as-is: MITRE IDs (T1566.001, TA0001, G0032, S0154), CVE numbers, IP addresses, domain names, hash values, malware names, APT group names
+- For key cybersecurity terms, provide English original in parentheses on first mention:
+  - "Первоначальный доступ (Initial Access)"
+  - "Боковое перемещение (Lateral Movement)"
+  - "Целевой фишинг (Spearphishing)"
+- Use established Russian cybersecurity terminology where it exists
+- Maintain the same structure and formatting as the original
+- Do NOT add or remove any information — translate faithfully
+- Respond ONLY with the translated text
+
+### Text to translate:
+{text}

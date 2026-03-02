@@ -16,9 +16,7 @@ CHUNK_SIZE = 12000
 
 
 def fetch_content_selenium(url):
-    """
-    Запускает настоящий Chrome в скрытом режиме, чтобы обойти защиту от ботов.
-    """
+    """Тянет страницу через headless Chrome, когда обычный requests не проходит."""
     print(f"\n[*] Агент-Сборщик (Selenium): Запускаю браузер для {url}...")
 
     chrome_options = Options()
@@ -59,12 +57,12 @@ def fetch_content_selenium(url):
 
 
 def split_text(text, chunk_size):
-    """Разбивает длинный текст на куски"""
+    """Режет длинный текст на чанки."""
     return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
 
 
 def merge_reports(reports):
-    """Объединяет несколько JSON-отчетов в один"""
+    """Склеивает частичные JSON-отчеты в один итоговый."""
     final_data = {
         "threat_actor": "Unknown",
         "targeted_countries": [],

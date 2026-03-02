@@ -10,9 +10,7 @@ OUTPUT_FOLDER = "final_reports"
 
 
 def fetch_article_content(url):
-    """
-    Притворяется браузером, скачивает страницу и достает текст.
-    """
+    """Скачивает статью как браузер и вытаскивает текст."""
     print(f"\n[*] Агент-Сборщик: Иду по ссылке {url}...")
 
     headers = {
@@ -43,9 +41,7 @@ def fetch_article_content(url):
 
 
 def analyze_threat_data(text_content):
-    """
-    Отправляет текст в LLM для извлечения сущностей.
-    """
+    """Отправляет текст в LLM и получает структуру по угрозам."""
     print("[*] Агент-Аналитик: Читаю текст и извлекаю сущности (это может занять 10-30 сек)...")
 
     system_prompt = """
@@ -102,7 +98,7 @@ def save_result(data, source_url):
 
 
 def print_summary(data, filename):
-    """Выводит красивую карточку в консоль"""
+    """Печатает короткое резюме в консоль."""
     print("\n" + "=" * 60)
     print(f"ОТЧЕТ СФОРМИРОВАН: {datetime.now().strftime('%H:%M:%S')}")
     print("=" * 60)

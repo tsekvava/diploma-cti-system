@@ -6,7 +6,7 @@ MODEL_NAME = "urchade/gliner_medium-v2.1"
 
 def extract_gliner(text):
     print("   [GLiNER] Загрузка модели...", file=sys.stderr)
-    # Если есть GPU, используем, иначе CPU
+    # Сначала пробуем GPU, если нет - идем на CPU/MPS.
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == "cpu" and torch.backends.mps.is_available(): device = "mps"
     

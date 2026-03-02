@@ -1,0 +1,308 @@
+{
+  "type": "bundle",
+  "id": "bundle--3d7890f1-823c-44aa-bdc8-9231933e0f87",
+  "objects": [
+    {
+      "type": "marking-definition",
+      "spec_version": "2.1",
+      "id": "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82",
+      "created": "2017-01-20T00:00:00.000Z",
+      "definition_type": "tlp",
+      "name": "TLP:AMBER",
+      "definition": {
+        "tlp": "amber"
+      }
+    },
+    {
+      "type": "intrusion-set",
+      "spec_version": "2.1",
+      "id": "intrusion-set--2627d538-b0ab-45f9-907f-adbaa966bfb9",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "name": "APT28",
+      "confidence": 100,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ],
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "G0007"
+        }
+      ],
+      "aliases": [
+        "IRON TWILIGHT",
+        "SNAKEMACKEREL",
+        "Swallowtail",
+        "Group 74",
+        "Sednit",
+        "Sofacy",
+        "Pawn Storm",
+        "Fancy Bear",
+        "STRONTIUM",
+        "Tsar Team"
+      ]
+    },
+    {
+      "type": "malware",
+      "spec_version": "2.1",
+      "id": "malware--ba3af4cc-1fbe-45fa-b7b3-1ef5b732bc3b",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "name": "CHOPSTICK",
+      "is_family": true,
+      "confidence": 95,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ],
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "S0023"
+        }
+      ]
+    },
+    {
+      "type": "tool",
+      "spec_version": "2.1",
+      "id": "tool--b07d8e5d-5e29-43d9-8488-87edb7dc6661",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "name": "PowerShell",
+      "confidence": 80,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--bd9144e4-98d0-4b84-8981-f221fbdbde5c",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "name": "T1566.001 - Spearphishing Attachment",
+      "confidence": 90,
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1566.001"
+        }
+      ],
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ],
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "initial-access"
+        }
+      ],
+      "x_opencti_description_ru": "Целевой фишинг с вложением"
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--76371f33-253f-4a27-a3cc-151d5638ba5f",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "name": "T1071.001 - Web Protocols",
+      "confidence": 95,
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1071.001"
+        }
+      ],
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ],
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "command-and-control"
+        }
+      ],
+      "x_opencti_description_ru": "Коммуникации с помощью веб-протоколов"
+    },
+    {
+      "type": "attack-pattern",
+      "spec_version": "2.1",
+      "id": "attack-pattern--0191b0df-5873-452b-8fd7-73eec417512c",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "name": "T1219 - Remote Access Tools",
+      "confidence": 90,
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1219"
+        }
+      ],
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ],
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "command-and-control"
+        }
+      ],
+      "x_opencti_description_ru": "Использование ПО для удаленного доступа"
+    },
+    {
+      "type": "indicator",
+      "spec_version": "2.1",
+      "id": "indicator--d19ff141-8aef-48f0-84cc-0e896942d246",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "name": "185.174.100.56",
+      "pattern": "[ipv4-addr:value = '185.174.100.56']",
+      "pattern_type": "stix",
+      "valid_from": "2026-02-22T08:08:47.000Z",
+      "confidence": 100,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--ebd20d3a-bd5c-476c-a968-bbb73dc7b194",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "uses",
+      "source_ref": "intrusion-set--2627d538-b0ab-45f9-907f-adbaa966bfb9",
+      "target_ref": "malware--ba3af4cc-1fbe-45fa-b7b3-1ef5b732bc3b",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--25a91709-050f-42d6-8940-c7b015fc1cc2",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "uses",
+      "source_ref": "intrusion-set--2627d538-b0ab-45f9-907f-adbaa966bfb9",
+      "target_ref": "tool--b07d8e5d-5e29-43d9-8488-87edb7dc6661",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--1306246c-d27c-4bd1-920f-bbfb6a8ecd14",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "uses",
+      "source_ref": "intrusion-set--2627d538-b0ab-45f9-907f-adbaa966bfb9",
+      "target_ref": "attack-pattern--bd9144e4-98d0-4b84-8981-f221fbdbde5c",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--b26921e1-b1b5-48b2-97b4-fed272da72a5",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "uses",
+      "source_ref": "intrusion-set--2627d538-b0ab-45f9-907f-adbaa966bfb9",
+      "target_ref": "attack-pattern--76371f33-253f-4a27-a3cc-151d5638ba5f",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--f9592cff-6049-4f6d-90a2-9ba45bccc6f1",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "uses",
+      "source_ref": "intrusion-set--2627d538-b0ab-45f9-907f-adbaa966bfb9",
+      "target_ref": "attack-pattern--0191b0df-5873-452b-8fd7-73eec417512c",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--4eab81fb-5085-4ec4-80b2-ff99e6068784",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "uses",
+      "source_ref": "malware--ba3af4cc-1fbe-45fa-b7b3-1ef5b732bc3b",
+      "target_ref": "attack-pattern--bd9144e4-98d0-4b84-8981-f221fbdbde5c",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--d0cc0989-031b-4468-9c83-49e3cfcff024",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "uses",
+      "source_ref": "malware--ba3af4cc-1fbe-45fa-b7b3-1ef5b732bc3b",
+      "target_ref": "attack-pattern--76371f33-253f-4a27-a3cc-151d5638ba5f",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--cc1c08f2-2d12-46ce-94f8-c6f0339199b9",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "uses",
+      "source_ref": "malware--ba3af4cc-1fbe-45fa-b7b3-1ef5b732bc3b",
+      "target_ref": "attack-pattern--0191b0df-5873-452b-8fd7-73eec417512c",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--f7609deb-b71d-450b-b43c-376672a05b85",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "indicates",
+      "source_ref": "indicator--d19ff141-8aef-48f0-84cc-0e896942d246",
+      "target_ref": "malware--ba3af4cc-1fbe-45fa-b7b3-1ef5b732bc3b",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    },
+    {
+      "type": "relationship",
+      "spec_version": "2.1",
+      "id": "relationship--88c369b1-b1d4-4174-b43f-b55200799165",
+      "created": "2026-02-22T08:08:47.000Z",
+      "modified": "2026-02-22T08:08:47.000Z",
+      "relationship_type": "indicates",
+      "source_ref": "indicator--d19ff141-8aef-48f0-84cc-0e896942d246",
+      "target_ref": "intrusion-set--2627d538-b0ab-45f9-907f-adbaa966bfb9",
+      "confidence": 70,
+      "object_marking_refs": [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+      ]
+    }
+  ]
+}

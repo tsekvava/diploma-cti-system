@@ -30,7 +30,7 @@ class CyberPipeline:
         print("🕵️ [3/3] Экстрактор (Hybrid) готов к работе.")
 
     def classify_message(self, text):
-        """Проверяет: Спам или Угроза?"""
+        """Быстрый фильтр: это угроза или просто шум."""
         msgs = [
             {"role": "system", "content": "Classify as 'THREAT' or 'SPAM'."},
             {"role": "user", "content": text}

@@ -1,0 +1,18 @@
+### Task:
+You are a Cyber Threat Intelligence (CTI) analyst. Classify the provided text.
+
+### Guidelines:
+- Determine if the text is a THREAT report or irrelevant content (SPAM/noise)
+- Assign a threat severity level if it is a threat report
+- Respond ONLY with valid JSON
+
+### Output Format:
+{
+  "classification": "THREAT" or "SPAM",
+  "severity": "critical" | "high" | "medium" | "low" | "informational",
+  "reasoning": "Brief explanation of classification decision",
+  "report_type": "apt_campaign" | "malware_analysis" | "vulnerability" | "incident_response" | "threat_advisory" | "other"
+}
+
+### Text to classify:
+{text}

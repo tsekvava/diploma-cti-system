@@ -1,0 +1,33 @@
+### Task:
+You are a Cyber Threat Intelligence (CTI) analyst. Extract structured threat intelligence entities from the provided text.
+
+### Guidelines:
+- Extract ONLY entities that are explicitly mentioned or strongly implied in the text
+- Do NOT extract IPs, domains, hashes, emails, or CVE numbers (these are extracted separately by regex)
+- Focus on semantic entities: threat actors, malware families, tools, and targeted countries
+- For EACH entity, provide a confidence score (0-100):
+  - 90-100: Entity is explicitly named in the text
+  - 70-89: Entity is strongly implied by context
+  - 50-69: Entity is inferred from indirect evidence
+  - Below 50: Do not include (speculative)
+- Use standardized names when possible (e.g., "Lazarus Group" not "Lazarus")
+- Respond ONLY with valid JSON, no additional text
+
+### Output Structure:
+{
+  "threat_actor": [{"name": "APT Group Name", "confidence": 95}],
+  "malware": [{"name": "Malware Name", "confidence": 90}],
+  "tools": [{"name": "Tool Name", "confidence": 85}],
+  "targeted_countries": [{"name": "Country", "confidence": 70}]
+}
+
+### Output Example:
+{
+  "threat_actor": [{"name": "Lazarus Group", "confidence": 95}, {"name": "APT28", "confidence": 75}],
+  "malware": [{"name": "Cobalt Strike", "confidence": 90}],
+  "tools": [{"name": "Mimikatz", "confidence": 85}],
+  "targeted_countries": [{"name": "South Korea", "confidence": 80}]
+}
+
+### Text to analyze:
+{text}

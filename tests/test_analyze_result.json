@@ -1,0 +1,102 @@
+{
+  "metadata": {
+    "source": "cli-input",
+    "analysis_date": "2026-02-22T11:08:47.336027",
+    "model": "mistral:7b",
+    "processing_time_sec": 56.95
+  },
+  "summary": "APT28 (Fancy Bear) employed spear-phishing emails containing malicious Word documents to distribute the XAgent backdoor. The attackers utilized email attachments to initiate the infection, aligning with MITRE ATT&CK T1192 (Email Attachment Malware). Upon execution, XAgent communicates with Command and Control (C2) server 185.174.100.56 and leverages PowerShell for its operations, referencing MITRE ATT&CK T1059.1 (PowerShell). It is crucial for network defenders to monitor for these indicators of compromise (IoCs) to mitigate potential infiltrations.",
+  "threat_actors": [
+    {
+      "name": "APT28",
+      "mitre_id": "G0007",
+      "aliases": [
+        "IRON TWILIGHT",
+        "SNAKEMACKEREL",
+        "Swallowtail",
+        "Group 74",
+        "Sednit",
+        "Sofacy",
+        "Pawn Storm",
+        "Fancy Bear",
+        "STRONTIUM",
+        "Tsar Team",
+        "Threat Group-4127",
+        "TG-4127",
+        "Forest Blizzard",
+        "FROZENLAKE",
+        "GruesomeLarch"
+      ],
+      "confidence": 100,
+      "normalized": true
+    }
+  ],
+  "malware": [
+    {
+      "name": "CHOPSTICK",
+      "mitre_id": "S0023",
+      "type": "malware",
+      "confidence": 95,
+      "normalized": true
+    }
+  ],
+  "tools": [
+    {
+      "name": "PowerShell",
+      "mitre_id": null,
+      "confidence": 80,
+      "normalized": false
+    }
+  ],
+  "indicators": {
+    "ipv4": [
+      "185.174.100.56"
+    ],
+    "domain": [],
+    "hash": [],
+    "email": []
+  },
+  "vulnerabilities": [],
+  "kill_chain": [
+    {
+      "tactic_id": "TA0001",
+      "tactic_name_en": "Initial Access",
+      "tactic_name_ru": "Первоначальный доступ",
+      "techniques": [
+        {
+          "id": "T1566.001",
+          "name_en": "Spearphishing Attachment",
+          "name_ru": "Целевой фишинг с вложением",
+          "confidence": 90,
+          "evidence": "APT28 used spearphishing emails with malicious Word documents",
+          "validated": true
+        }
+      ]
+    },
+    {
+      "tactic_id": "TA0011",
+      "tactic_name_en": "Command and Control",
+      "tactic_name_ru": "Управление и контроль",
+      "techniques": [
+        {
+          "id": "T1071.001",
+          "name_en": "Web Protocols",
+          "name_ru": "Коммуникации с помощью веб-протоколов",
+          "confidence": 95,
+          "evidence": "The backdoor communicates via Web Protocols",
+          "validated": true
+        },
+        {
+          "id": "T1219",
+          "name_en": "Remote Access Tools",
+          "name_ru": "Использование ПО для удаленного доступа",
+          "confidence": 90,
+          "evidence": "APT28 uses a backdoor (XAgent) which implies Remote Access Tools",
+          "validated": true
+        }
+      ]
+    }
+  ],
+  "overall_confidence": 92,
+  "targeted_countries": []
+}

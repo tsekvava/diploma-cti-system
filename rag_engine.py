@@ -14,7 +14,7 @@ class RAGSystem:
         self.collection = self.client.get_or_create_collection(name="threat_reports")
 
     def add_report(self, text, metadata):
-        """Добавляет отчет в базу знаний"""
+        """Кладет отчет в векторную базу."""
         embedding = self.embedder.encode(text).tolist()
         
         self.collection.add(
@@ -26,7 +26,7 @@ class RAGSystem:
         print(f"   [RAG] Добавлен отчет: {metadata.get('title', 'Unknown')}")
 
     def search(self, query, n_results=2):
-        """Ищет похожие отчеты"""
+        """Ищет самые похожие отчеты."""
         query_embedding = self.embedder.encode(query).tolist()
         
         results = self.collection.query(

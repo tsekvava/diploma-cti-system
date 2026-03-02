@@ -4,7 +4,7 @@ import seaborn as sns
 import os
 
 def add_labels(ax):
-    """Добавляет цифры над столбиками"""
+    """Подписывает значения над столбцами."""
     for p in ax.patches:
         if p.get_height() > 0:
             ax.annotate(f'{p.get_height():.2f}', 
