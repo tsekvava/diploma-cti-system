@@ -64,12 +64,9 @@ numpy==2.4.1
 oauthlib==3.3.1
 ollama==0.6.1
 onnxruntime==1.23.2
-opentelemetry-api==1.39.1
-opentelemetry-exporter-otlp-proto-common==1.39.1
-opentelemetry-exporter-otlp-proto-grpc==1.39.1
-opentelemetry-proto==1.39.1
-opentelemetry-sdk==1.39.1
-opentelemetry-semantic-conventions==0.60b1
+# NOTE:
+# opentelemetry* packages intentionally not pinned here.
+# pycti/chromadb pull compatible versions transitively.
 orjson==3.11.5
 overrides==7.7.0
 packaging==25.0
@@ -94,7 +91,8 @@ pyproject_hooks==1.2.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 python-json-logger==3.3.0
-python-magic==0.4.27
+python-magic==0.4.27; platform_system != "Windows"
+python-magic-bin==0.4.14; platform_system == "Windows"
 pytz==2025.2
 PyYAML==6.0.3
 referencing==0.37.0
@@ -130,7 +128,7 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.6.3
 uvicorn==0.35.0
-uvloop==0.22.1
+uvloop==0.22.1; platform_system != "Windows"
 watchfiles==1.1.1
 websocket-client==1.9.0
 websockets==16.0

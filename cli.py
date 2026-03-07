@@ -23,16 +23,56 @@ CTI Pipeline CLI — единая точка входа для системы а
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 # Корень проекта
 ROOT = Path(__file__).parent
 
 
+def _build_ollama_url(host: str, port: int | None) -> str:
+    """Собирает URL Ollama из host/port."""
+    raw = host.strip()
+    if "://" not in raw:
+        raw = f"http://{raw}"
+
+    parsed = urlparse(raw)
+    scheme = parsed.scheme or "http"
+    hostname = parsed.hostname or parsed.path
+    if not hostname:
+        raise ValueError(f"Некорректный --ollama-host: {host}")
+
+    final_port = port if port is not None else (parsed.port or 11434)
+    return f"{scheme}://{hostname}:{final_port}"
+
+
+def _configure_ollama(args) -> str | None:
+    """Настраивает endpoint Ollama через OLLAMA_HOST."""
+    host = getattr(args, "ollama_host", None) or os.getenv("CTI_OLLAMA_HOST")
+    port = getattr(args, "ollama_port", None)
+    if port is None:
+        env_port = os.getenv("CTI_OLLAMA_PORT")
+        if env_port:
+            try:
+                port = int(env_port)
+            except ValueError:
+                raise ValueError(f"Некорректный CTI_OLLAMA_PORT: {env_port}")
+
+    if not host:
+        return None
+
+    url = _build_ollama_url(host, port)
+    os.environ["OLLAMA_HOST"] = url
+    print(f"Ollama endpoint: {url}")
+    return url
+
+
 def cmd_analyze(args):
     """Полный 7-этапный анализ отчёта."""
+    _configure_ollama(args)
     from summarizer.report_summarizer import ReportSummarizer
 
     # Чтение текста
@@ -251,12 +291,18 @@ def cmd_benchmark(args):
     if args.output:
         cmd.extend(["--output", args.output])
 
+    env = os.environ.copy()
+    ollama_url = _configure_ollama(args)
+    if ollama_url:
+        env["OLLAMA_HOST"] = ollama_url
+
     print(f"Запуск: {' '.join(cmd)}\n")
-    return subprocess.call(cmd)
+    return subprocess.call(cmd, env=env)
 
 
 def cmd_profile(args):
     """Генерация профиля APT-группы или ПО."""
+    _configure_ollama(args)
     from summarizer.profiler import Profiler
 
     query = " ".join(args.query)
@@ -371,6 +417,8 @@ def main():
     input_group.add_argument("-f", "--file", help="Путь к текстовому файлу отчёта")
     input_group.add_argument("-t", "--text", help="Текст отчёта напрямую")
     p_analyze.add_argument("--model", default="gemma2:9b", help="Ollama модель (default: gemma2:9b)")
+    p_analyze.add_argument("--ollama-host", help="Хост Ollama (например 127.0.0.1 или ollama.local)")
+    p_analyze.add_argument("--ollama-port", type=int, help="Порт Ollama (default: 11434)")
     p_analyze.add_argument("-o", "--output", help="Сохранить JSON результат в файл")
     p_analyze.add_argument("--json", dest="json_output", action="store_true", help="Вывести только JSON")
     p_analyze.add_argument("--export", metavar="FILE", help="Автоматически экспортировать STIX Bundle")
@@ -394,6 +442,8 @@ def main():
     p_bench = subparsers.add_parser("benchmark", help="Бенчмарк LLM-моделей")
     p_bench.add_argument("--models", default="gemma2:9b,qwen2.5:14b",
                          help="Модели через запятую (default: gemma2:9b,qwen2.5:14b)")
+    p_bench.add_argument("--ollama-host", help="Хост Ollama для бенчмарка")
+    p_bench.add_argument("--ollama-port", type=int, help="Порт Ollama (default: 11434)")
     p_bench.add_argument("--skip-baselines", action="store_true", default=True,
                          help="Пропустить baseline-модели")
     p_bench.add_argument("-o", "--output", default="benchmark_results.csv", help="Файл результатов")
@@ -404,6 +454,8 @@ def main():
     p_profile.add_argument("--type", choices=["auto", "group", "software"], default="auto",
                            help="Тип сущности (default: auto)")
     p_profile.add_argument("--model", default="gemma2:9b", help="Ollama модель (default: gemma2:9b)")
+    p_profile.add_argument("--ollama-host", help="Хост Ollama (например 10.0.0.5)")
+    p_profile.add_argument("--ollama-port", type=int, help="Порт Ollama (default: 11434)")
     p_profile.add_argument("--json", dest="json_output", action="store_true", help="Вывод в JSON формате")
     p_profile.add_argument("-o", "--output", help="Сохранить результат в файл")
 

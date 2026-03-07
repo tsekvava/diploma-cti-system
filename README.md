@@ -110,12 +110,19 @@ pip install -r requirements.txt
 ollama pull gemma2:9b
 ```
 
+Если Ollama запущен на удалённом хосте, можно задать endpoint через переменные:
+```bash
+export CTI_OLLAMA_HOST=10.10.10.50
+export CTI_OLLAMA_PORT=11434
+```
+
 ### Команды CLI
 
 ```bash
 # Полный анализ отчёта
 python3 cli.py analyze -f report.txt
 python3 cli.py analyze -f report.txt --model qwen2.5:14b --export stix_bundle.json
+python3 cli.py analyze -f report.txt --ollama-host 10.10.10.50 --ollama-port 11434
 
 # Обогащение запроса из MITRE ATT&CK
 python3 cli.py enrich T1059
@@ -125,6 +132,7 @@ python3 cli.py enrich G0032
 # Профилирование APT-группы или ПО
 python3 cli.py profile "APT28"
 python3 cli.py profile "Cobalt Strike" --type software
+python3 cli.py profile "APT28" --ollama-host 10.10.10.50 --ollama-port 11434
 
 # Экспорт в STIX Bundle (для air-gapped OpenCTI)
 python3 cli.py export -i result.json --stix-bundle output.json
@@ -134,6 +142,7 @@ python3 cli.py export -i result.json --url http://opencti:8080 --token API_TOKEN
 
 # Запуск бенчмарка
 python3 cli.py benchmark --models "gemma2:9b,qwen2.5:14b"
+python3 cli.py benchmark --models "gemma2:9b,qwen2.5:14b" --ollama-host 10.10.10.50
 
 # Пересоздание базы MITRE ATT&CK
 python3 cli.py mitre-db
@@ -148,6 +157,7 @@ python3 mcp_server.py
 
 # Запуск через SSE (веб-клиенты)
 python3 mcp_server.py --transport sse --port 8000
+python3 mcp_server.py --transport sse --port 8000 --ollama-host 10.10.10.50 --ollama-port 11434
 ```
 
 Конфигурация для Claude Desktop — см. `mcp_config_example.json`.

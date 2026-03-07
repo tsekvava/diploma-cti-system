@@ -6,7 +6,9 @@
       "cwd": "/path/to/cti-pipeline",
       "env": {
         "OPENCTI_URL": "http://localhost:8080",
-        "OPENCTI_TOKEN": "your-token-here"
+        "OPENCTI_TOKEN": "your-token-here",
+        "CTI_OLLAMA_HOST": "127.0.0.1",
+        "CTI_OLLAMA_PORT": "11434"
       }
     }
   }

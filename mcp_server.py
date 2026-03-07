@@ -22,10 +22,12 @@ Resources:
 """
 
 import json
+import os
 import sys
 import sqlite3
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from mcp.server.fastmcp import FastMCP
 
@@ -43,6 +45,40 @@ mcp = FastMCP(
 
 # --- Ленивая инициализация компонентов ---
 _components = {}
+
+
+def _build_ollama_url(host: str, port: int | None) -> str:
+    raw = host.strip()
+    if "://" not in raw:
+        raw = f"http://{raw}"
+
+    parsed = urlparse(raw)
+    scheme = parsed.scheme or "http"
+    hostname = parsed.hostname or parsed.path
+    if not hostname:
+        raise ValueError(f"Invalid Ollama host: {host}")
+
+    final_port = port if port is not None else (parsed.port or 11434)
+    return f"{scheme}://{hostname}:{final_port}"
+
+
+def _configure_ollama(host: str | None, port: int | None):
+    env_host = host or os.getenv("CTI_OLLAMA_HOST")
+    env_port = port
+    if env_port is None:
+        raw_port = os.getenv("CTI_OLLAMA_PORT")
+        if raw_port:
+            try:
+                env_port = int(raw_port)
+            except ValueError:
+                raise ValueError(f"Invalid CTI_OLLAMA_PORT: {raw_port}")
+
+    if not env_host:
+        return
+
+    url = _build_ollama_url(env_host, env_port)
+    os.environ["OLLAMA_HOST"] = url
+    print(f"Ollama endpoint: {url}")
 
 
 def _get_enricher():
@@ -520,7 +556,11 @@ def main():
         help="Transport: stdio (Claude Desktop) or sse (web clients)",
     )
     parser.add_argument("--port", type=int, default=8000, help="Port for SSE transport")
+    parser.add_argument("--ollama-host", help="Ollama host (e.g. 127.0.0.1 or ollama.internal)")
+    parser.add_argument("--ollama-port", type=int, help="Ollama port (default: 11434)")
     args = parser.parse_args()
+
+    _configure_ollama(args.ollama_host, args.ollama_port)
 
     if args.transport == "sse":
         mcp.run(transport="sse", port=args.port)
