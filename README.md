@@ -13,7 +13,7 @@
 ## Архитектура
 
 ```
-Входной отчёт (текст/HTML)
+Входной отчёт (txt/pdf/docx/html/image)
     |
     v
 [1] Regex-экстракция IoC (IP, домены, хеши, CVE)
@@ -46,19 +46,21 @@
 
 ```
 project/
-├── cli.py                      # Единый CLI (7 команд)
+├── cli.py                      # Единый CLI (8 команд)
 ├── mcp_server.py               # MCP-сервер (7 инструментов, для LLM-клиентов)
 ├── opencti_exporter.py         # Экспорт в OpenCTI / STIX 2.1 Bundle
 ├── requirements.txt            # Зависимости Python
 │
 ├── summarizer/                 # Модуль суммаризации
 │   ├── report_summarizer.py    # 7-этапный пайплайн анализа отчёта
+│   ├── input_loader.py         # Multi-format загрузчик (txt/pdf/docx/html/image + OCR)
 │   ├── translator.py           # Перевод EN → RU
 │   └── profiler.py             # Профилирование APT-групп и ВПО
 │
 ├── knowledge_base/             # База знаний MITRE ATT&CK
 │   ├── mitre_catalog.py        # Сборка SQLite из XLSX + STIX JSON
 │   ├── mitre.db                # SQLite база (634 техники, 172 группы, 784 ПО)
+│   ├── intel_sync.py           # Импорт internal intel из OpenCTI STIX JSON
 │   ├── normalizer.py           # Нормализация сущностей (3 уровня)
 │   ├── attack_mapper.py        # Kill Chain маппинг (2-этапный LLM + валидация)
 │   └── query_enricher.py       # Обогащение коротких запросов (T1059, G0032, CVE...)
@@ -100,6 +102,7 @@ project/
 ### Требования
 - Python 3.10+
 - [Ollama](https://ollama.com/) (локальный LLM inference)
+- Tesseract OCR (для PDF-сканов/изображений и встроенных картинок в HTML/DOCX)
 
 ### Установка
 ```bash
@@ -121,6 +124,7 @@ export CTI_OLLAMA_PORT=11434
 ```bash
 # Полный анализ отчёта
 python3 cli.py analyze -f report.txt
+python3 cli.py analyze -f report.pdf --ocr auto --ocr-lang rus+eng
 python3 cli.py analyze -f report.txt --model qwen2.5:14b --export stix_bundle.json
 python3 cli.py analyze -f report.txt --ollama-host 10.10.10.50 --ollama-port 11434
 
@@ -147,6 +151,15 @@ python3 cli.py benchmark --models "gemma2:9b,qwen2.5:14b" --ollama-host 10.10.10
 # Пересоздание базы MITRE ATT&CK
 python3 cli.py mitre-db
 
+# Импорт internal intel из OpenCTI STIX JSON
+python3 cli.py intel-sync --stix opencti_bundle.json --append
+python3 cli.py intel-sync --stix opencti_bundle.json --replace-source
+
+```
+
+Если OCR не работает, укажи путь к бинарнику Tesseract:
+```bash
+export TESSERACT_CMD=/usr/bin/tesseract
 ```
 
 ### MCP-сервер (для Claude Desktop и других LLM-клиентов)
@@ -193,6 +206,7 @@ python3 mcp_server.py --transport sse --port 8000 --ollama-host 10.10.10.50 --ol
 - 4 276 связей группа→техника
 - 10 434 связей ПО→техника
 - 37 источников данных, 44 меры предотвращения
+- Отдельный internal-layer (`intel_*` таблицы) для данных из OpenCTI STIX
 
 Собирается из двух источников:
 1. XLSX-файл с переводом MITRE ATT&CK v18 на русский (от научрука)

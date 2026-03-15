@@ -7,6 +7,7 @@ CTI Pipeline CLI — единая точка входа для системы а
   enrich    — обогащение запроса из MITRE ATT&CK БД
   export    — экспорт результатов в OpenCTI (API или STIX Bundle)
   benchmark — запуск бенчмарка моделей
+  intel-sync — импорт internal intel из OpenCTI STIX JSON
   mitre-db  — пересоздание базы MITRE ATT&CK
 
 Примеры:
@@ -18,6 +19,7 @@ CTI Pipeline CLI — единая точка входа для системы а
   python3 cli.py export -i result.json --dry-run
   python3 cli.py export -i result.json --stix-bundle output.json
   python3 cli.py benchmark --models "gemma2:9b,qwen2.5:14b"
+  python3 cli.py intel-sync --stix opencti_bundle.json
   python3 cli.py mitre-db
 """
 
@@ -74,23 +76,51 @@ def cmd_analyze(args):
     """Полный 7-этапный анализ отчёта."""
     _configure_ollama(args)
     from summarizer.report_summarizer import ReportSummarizer
+    from summarizer.input_loader import load_report_file, InputLoadError
 
+    input_metadata = {}
     # Чтение текста
     if args.file:
         if not Path(args.file).exists():
             print(f"Файл не найден: {args.file}")
             return 1
-        with open(args.file, "r", encoding="utf-8") as f:
-            text = f.read()
-        source = Path(args.file).name
+        try:
+            loaded = load_report_file(
+                args.file,
+                ocr_mode=args.ocr,
+                ocr_lang=args.ocr_lang,
+            )
+        except InputLoadError as e:
+            print(f"Ошибка парсинга файла: {e}")
+            return 1
+        text = loaded.text
+        source = loaded.source
+        input_metadata = {
+            "input_format": loaded.input_format,
+            "pages": loaded.pages,
+            "ocr_used": loaded.ocr_used,
+            "parse_warnings": loaded.parse_warnings,
+        }
     elif args.text:
         text = args.text
         source = "cli-input"
+        input_metadata = {
+            "input_format": "text",
+            "pages": 1,
+            "ocr_used": False,
+            "parse_warnings": [],
+        }
     else:
         # Читаем из stdin
         print("Введите текст отчёта (Ctrl+D для завершения):")
         text = sys.stdin.read()
         source = "stdin"
+        input_metadata = {
+            "input_format": "stdin",
+            "pages": 1,
+            "ocr_used": False,
+            "parse_warnings": [],
+        }
 
     if not text.strip():
         print("Пустой текст. Нечего анализировать.")
@@ -100,14 +130,22 @@ def cmd_analyze(args):
     print(f"CTI PIPELINE — Анализ отчёта")
     print(f"Источник: {source}")
     print(f"Модель:   {args.model}")
+    print(f"Формат:   {input_metadata.get('input_format', 'text')}")
+    print(f"OCR:      {'ON' if input_metadata.get('ocr_used') else 'OFF'}")
     print(f"Длина:    {len(text)} символов")
     print(f"{'=' * 60}\n")
+
+    if input_metadata.get("parse_warnings"):
+        print("⚠️  Предупреждения парсинга:")
+        for w in input_metadata["parse_warnings"]:
+            print(f"   - {w}")
+        print()
 
     # Инициализация
     summarizer = ReportSummarizer(model_name=args.model)
 
     # Запуск пайплайна
-    result = summarizer.process(text, source=source)
+    result = summarizer.process(text, source=source, input_metadata=input_metadata)
 
     # Вывод
     if args.json_output:
@@ -144,6 +182,17 @@ def _print_analysis_result(result):
     # Metadata
     print(f"  Модель:  {meta.get('model', '?')}")
     print(f"  Время:   {result.get('processing_time', 0):.1f}с")
+    print(f"  Формат:  {meta.get('input_format', 'text')}")
+    print(f"  Страниц: {meta.get('pages', 1)}")
+    print(f"  OCR:     {'ON' if meta.get('ocr_used') else 'OFF'}")
+
+    warnings = meta.get("warnings", []) or []
+    if warnings:
+        print(f"\n  Warnings ({len(warnings)}):")
+        for w in warnings[:8]:
+            print(f"    - {w}")
+        if len(warnings) > 8:
+            print(f"    ... ещё {len(warnings) - 8}")
 
     # Classification
     cls = data.get("classification", {})
@@ -366,6 +415,30 @@ def cmd_mitre_db(args):
     return 0
 
 
+def cmd_intel_sync(args):
+    """Импорт корпоративной базы знаний из STIX JSON (OpenCTI export)."""
+    from knowledge_base.intel_sync import InternalIntelSync
+
+    mode = "replace" if args.replace_source else "append"
+    source = args.source or "opencti"
+
+    syncer = InternalIntelSync()
+    try:
+        stats = syncer.import_stix(args.stix, mode=mode, source=source)
+    finally:
+        syncer.close()
+
+    print("\nINTEL SYNC — RESULT")
+    print(f"  Source:   {stats.get('source')}")
+    print(f"  Mode:     {stats.get('mode')}")
+    print(f"  Objects:  {stats.get('objects_scanned', 0)}")
+    print(f"  Groups:   {stats.get('groups_upserted', 0)}")
+    print(f"  Software: {stats.get('software_upserted', 0)}")
+    print(f"  G→T links:{stats.get('group_tech_links_upserted', 0)}")
+    print(f"  S→T links:{stats.get('software_tech_links_upserted', 0)}")
+    return 0
+
+
 def cmd_survey(args):
     """Анализ ответов опроса SOC-аналитиков."""
     sys.path.insert(0, str(ROOT / "data" / "soc_survey"))
@@ -399,6 +472,7 @@ def main():
         epilog="""
 Примеры:
   %(prog)s analyze -f report.txt
+  %(prog)s analyze -f report.pdf --ocr auto --ocr-lang rus+eng
   %(prog)s analyze -f report.txt --model gemma2:9b --export bundle.json
   %(prog)s enrich T1059
   %(prog)s enrich "Lazarus Group" --json
@@ -407,6 +481,7 @@ def main():
   %(prog)s export -i result.json --dry-run
   %(prog)s export -i result.json --stix-bundle output.json
   %(prog)s benchmark --models "gemma2:9b,qwen2.5:14b"
+  %(prog)s intel-sync --stix opencti_bundle.json --append
         """,
     )
     subparsers = parser.add_subparsers(dest="command", help="Доступные команды")
@@ -414,7 +489,10 @@ def main():
     # ── analyze ──
     p_analyze = subparsers.add_parser("analyze", help="Полный анализ CTI-отчёта")
     input_group = p_analyze.add_mutually_exclusive_group()
-    input_group.add_argument("-f", "--file", help="Путь к текстовому файлу отчёта")
+    input_group.add_argument(
+        "-f", "--file",
+        help="Путь к файлу отчёта (txt/md/log/html/docx/pdf/png/jpg/jpeg/bmp)",
+    )
     input_group.add_argument("-t", "--text", help="Текст отчёта напрямую")
     p_analyze.add_argument("--model", default="gemma2:9b", help="Ollama модель (default: gemma2:9b)")
     p_analyze.add_argument("--ollama-host", help="Хост Ollama (например 127.0.0.1 или ollama.local)")
@@ -423,6 +501,10 @@ def main():
     p_analyze.add_argument("--json", dest="json_output", action="store_true", help="Вывести только JSON")
     p_analyze.add_argument("--export", metavar="FILE", help="Автоматически экспортировать STIX Bundle")
     p_analyze.add_argument("--tlp", default="TLP:AMBER", help="TLP-маркировка (default: TLP:AMBER)")
+    p_analyze.add_argument("--ocr", choices=["auto", "on", "off"], default="auto",
+                           help="OCR режим для PDF/изображений и встроенных картинок в html/docx (default: auto)")
+    p_analyze.add_argument("--ocr-lang", default="rus+eng",
+                           help="Языки OCR для tesseract (default: rus+eng)")
 
     # ── enrich ──
     p_enrich = subparsers.add_parser("enrich", help="Обогащение запроса из MITRE ATT&CK")
@@ -462,6 +544,16 @@ def main():
     # ── mitre-db ──
     p_mitre = subparsers.add_parser("mitre-db", help="Пересоздать базу MITRE ATT&CK SQLite")
 
+    # ── intel-sync ──
+    p_sync = subparsers.add_parser("intel-sync", help="Импорт internal intel из STIX JSON (OpenCTI)")
+    p_sync.add_argument("--stix", required=True, help="Путь к STIX JSON/BUNDLE файлу")
+    mode_group = p_sync.add_mutually_exclusive_group()
+    mode_group.add_argument("--replace-source", action="store_true",
+                            help="Перед импортом очистить предыдущий слой этого source")
+    mode_group.add_argument("--append", action="store_true",
+                            help="Добавить/обновить записи (по умолчанию)")
+    p_sync.add_argument("--source", default="opencti", help="Имя источника (default: opencti)")
+
     # ── survey ──
     p_survey = subparsers.add_parser("survey", help="Анализ ответов опроса SOC-аналитиков")
     p_survey.add_argument("-i", "--input", help="JSON-файл с ответами опроса")
@@ -481,6 +573,7 @@ def main():
         "profile": cmd_profile,
         "benchmark": cmd_benchmark,
         "mitre-db": cmd_mitre_db,
+        "intel-sync": cmd_intel_sync,
         "survey": cmd_survey,
     }
 

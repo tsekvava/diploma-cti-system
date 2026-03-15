@@ -142,8 +142,26 @@ def summarize_report(
         model: Ollama модель (default: gemma2:9b)
         source: Имя источника для метаданных
     """
+    input_metadata = {}
+    candidate_path = Path(str(text).strip()).expanduser()
+    if candidate_path.exists() and candidate_path.is_file():
+        try:
+            from summarizer.input_loader import load_report_file
+            loaded = load_report_file(candidate_path)
+            text = loaded.text
+            if source == "mcp-input":
+                source = loaded.source
+            input_metadata = {
+                "input_format": loaded.input_format,
+                "pages": loaded.pages,
+                "ocr_used": loaded.ocr_used,
+                "parse_warnings": loaded.parse_warnings,
+            }
+        except Exception as e:
+            return json.dumps({"status": "error", "error": f"Failed to parse input file: {e}"})
+
     summarizer = _get_summarizer(model)
-    result = summarizer.process(text, source=source)
+    result = summarizer.process(text, source=source, input_metadata=input_metadata)
 
     # Формируем ответ
     output = {

@@ -47,6 +47,39 @@ class AttackMapper:
             "Identify techniques for tactic {tactic_id}.\n{text}",
         )
 
+        # Проверяем только обязательные плейсхолдеры.
+        # JSON-скобки внутри шаблонов допускаются и не должны ломать рендер.
+        self._validate_template(
+            self._tactics_prompt_template,
+            required={"tactics_reference", "text"},
+            template_name="map_killchain_tactics.txt",
+        )
+        self._validate_template(
+            self._techniques_prompt_template,
+            required={"tactic_name", "tactic_id", "techniques_reference", "text"},
+            template_name="map_killchain_techniques.txt",
+        )
+
+    @staticmethod
+    def _validate_template(template: str, required: set[str], template_name: str):
+        missing = [key for key in required if f"{{{key}}}" not in template]
+        if missing:
+            raise ValueError(
+                f"Prompt template '{template_name}' missing placeholders: {', '.join(missing)}"
+            )
+
+    @staticmethod
+    def _render_template(template: str, values: dict[str, str]) -> str:
+        """Безопасный рендер плейсхолдеров без str.format.
+
+        Важно: в шаблоне могут быть JSON-фрагменты вроде {"tactics": ...},
+        и str.format интерпретирует это как ключ.
+        """
+        rendered = template
+        for key, value in values.items():
+            rendered = rendered.replace(f"{{{key}}}", str(value))
+        return rendered
+
     def _build_tactic_reference(self):
         """Строит справочный текст с тактиками для промпта."""
         from knowledge_base.normalizer import DB_PATH
@@ -110,16 +143,24 @@ class AttackMapper:
                 ]
             }
         """
+        warnings = []
+
         # Обрезаем текст если слишком длинный
         truncated = text[:max_text_len] if len(text) > max_text_len else text
 
         # Этап 1: Определение тактик
         print("   [Kill Chain] Этап 1: определение тактик...")
-        tactics = self._identify_tactics(truncated)
+        try:
+            tactics = self._identify_tactics(truncated)
+        except Exception as e:
+            msg = f"Kill Chain Stage 1 failed: {e}"
+            print(f"   [Kill Chain] {msg}")
+            warnings.append(msg)
+            return {"kill_chain_phases": [], "warnings": warnings}
 
         if not tactics:
             print("   [Kill Chain] Тактики не определены")
-            return {"kill_chain_phases": []}
+            return {"kill_chain_phases": [], "warnings": warnings}
 
         print(f"   [Kill Chain] Найдено тактик: {len(tactics)}")
 
@@ -136,7 +177,13 @@ class AttackMapper:
                 continue
 
             print(f"   [Kill Chain] Этап 2: техники для {tactic_id} {tactic_data['name_en']}...")
-            techniques = self._identify_techniques(truncated, tactic_id, tactic_data)
+            try:
+                techniques = self._identify_techniques(truncated, tactic_id, tactic_data)
+            except Exception as e:
+                msg = f"Kill Chain Stage 2 failed for {tactic_id}: {e}"
+                print(f"   [Kill Chain] {msg}")
+                warnings.append(msg)
+                techniques = []
 
             phase = {
                 "tactic_id": tactic_id,
@@ -150,30 +197,32 @@ class AttackMapper:
         tactic_order = {t["id"]: t["order"] for t in self._tactics}
         phases.sort(key=lambda p: tactic_order.get(p["tactic_id"], 99))
 
-        return {"kill_chain_phases": phases}
+        return {"kill_chain_phases": phases, "warnings": warnings}
 
     def _identify_tactics(self, text: str) -> list[dict]:
         """Этап 1: LLM определяет какие тактики описаны в тексте."""
-        prompt = self._tactics_prompt_template.format(
-            tactics_reference=self._tactics_reference,
-            text=text,
+        prompt = self._render_template(
+            self._tactics_prompt_template,
+            {
+                "tactics_reference": self._tactics_reference,
+                "text": text,
+            },
         )
 
-        try:
-            response = ollama.chat(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": "You are a MITRE ATT&CK expert. Respond ONLY with valid JSON."},
-                    {"role": "user", "content": prompt},
-                ],
-                format="json",
-                options={"temperature": 0.1, "num_ctx": 8192},
-            )
-            data = json.loads(response["message"]["content"])
-            return data.get("tactics", [])
-        except Exception as e:
-            print(f"   [Kill Chain] Ошибка Этапа 1: {e}")
-            return []
+        response = ollama.chat(
+            model=self.model_name,
+            messages=[
+                {"role": "system", "content": "You are a MITRE ATT&CK expert. Respond ONLY with valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            format="json",
+            options={"temperature": 0.1, "num_ctx": 8192},
+        )
+        data = json.loads(response["message"]["content"])
+        tactics = data.get("tactics", [])
+        if not isinstance(tactics, list):
+            raise ValueError("Invalid JSON schema: 'tactics' must be a list")
+        return tactics
 
     def _identify_techniques(self, text: str, tactic_id: str, tactic_data: dict) -> list[dict]:
         """Этап 2: LLM выбирает конкретные техники из списка для тактики."""
@@ -181,28 +230,29 @@ class AttackMapper:
         if not techniques_ref:
             return []
 
-        prompt = self._techniques_prompt_template.format(
-            tactic_name=tactic_data["name_en"],
-            tactic_id=tactic_id,
-            techniques_reference=techniques_ref,
-            text=text,
+        prompt = self._render_template(
+            self._techniques_prompt_template,
+            {
+                "tactic_name": tactic_data["name_en"],
+                "tactic_id": tactic_id,
+                "techniques_reference": techniques_ref,
+                "text": text,
+            },
         )
 
-        try:
-            response = ollama.chat(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": "You are a MITRE ATT&CK expert. Respond ONLY with valid JSON."},
-                    {"role": "user", "content": prompt},
-                ],
-                format="json",
-                options={"temperature": 0.1, "num_ctx": 8192},
-            )
-            data = json.loads(response["message"]["content"])
-            raw_techniques = data.get("techniques", [])
-        except Exception as e:
-            print(f"   [Kill Chain] Ошибка Этапа 2 ({tactic_id}): {e}")
-            return []
+        response = ollama.chat(
+            model=self.model_name,
+            messages=[
+                {"role": "system", "content": "You are a MITRE ATT&CK expert. Respond ONLY with valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            format="json",
+            options={"temperature": 0.1, "num_ctx": 8192},
+        )
+        data = json.loads(response["message"]["content"])
+        raw_techniques = data.get("techniques", [])
+        if not isinstance(raw_techniques, list):
+            raise ValueError("Invalid JSON schema: 'techniques' must be a list")
 
         # Валидация: проверяем каждый ID в справочнике
         validated = []

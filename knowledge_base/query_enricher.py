@@ -37,8 +37,8 @@ DB_PATH = Path(__file__).parent / "mitre.db"
 QUERY_PATTERNS = [
     ("technique",    r"\b(T\d{4}(?:\.\d{3})?)\b"),
     ("tactic",       r"\b(TA\d{4})\b"),
-    ("group_id",     r"\b(G\d{4})\b"),
-    ("software_id",  r"\b(S\d{4})\b"),
+    ("group_id",     r"\b(G\d{4}|XG-[A-F0-9]{12})\b"),
+    ("software_id",  r"\b(S\d{4}|XS-[A-F0-9]{12})\b"),
     ("mitigation",   r"\b(M\d{4})\b"),
     ("data_source",  r"\b(DS\d{4})\b"),
     ("cve",          r"\b(CVE-\d{4}-\d{4,7})\b"),
@@ -52,6 +52,17 @@ class QueryEnricher:
         self.db_path = db_path or str(DB_PATH)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
+        self._has_intel_groups = self._table_exists("intel_groups")
+        self._has_intel_software = self._table_exists("intel_software")
+        self._has_intel_group_tech = self._table_exists("intel_group_techniques")
+        self._has_intel_sw_tech = self._table_exists("intel_software_techniques")
+
+    def _table_exists(self, table_name: str) -> bool:
+        row = self.conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?",
+            (table_name,),
+        ).fetchone()
+        return row is not None
 
     def close(self):
         self.conn.close()
@@ -121,6 +132,16 @@ class QueryEnricher:
                     found.append({"type": "group_id", "id": row["id"], "name": row["name"]})
                     seen_ids.add(row["id"])
 
+            if self._has_intel_groups:
+                cur.execute(
+                    "SELECT id, name FROM intel_groups WHERE LOWER(name) LIKE ? OR LOWER(aliases) LIKE ?",
+                    (f"%{term}%", f"%{term}%"),
+                )
+                for row in cur.fetchall():
+                    if row["id"] not in seen_ids:
+                        found.append({"type": "group_id", "id": row["id"], "name": row["name"]})
+                        seen_ids.add(row["id"])
+
             # Ищем в software
             cur.execute(
                 "SELECT id, name FROM software WHERE LOWER(name) LIKE ? OR LOWER(aliases) LIKE ?",
@@ -130,6 +151,16 @@ class QueryEnricher:
                 if row["id"] not in seen_ids:
                     found.append({"type": "software_id", "id": row["id"], "name": row["name"]})
                     seen_ids.add(row["id"])
+
+            if self._has_intel_software:
+                cur.execute(
+                    "SELECT id, name FROM intel_software WHERE LOWER(name) LIKE ? OR LOWER(aliases) LIKE ?",
+                    (f"%{term}%", f"%{term}%"),
+                )
+                for row in cur.fetchall():
+                    if row["id"] not in seen_ids:
+                        found.append({"type": "software_id", "id": row["id"], "name": row["name"]})
+                        seen_ids.add(row["id"])
 
             # Ищем в техниках (только для конкретных терминов, не стоп-слов)
             if len(term) >= 5:
@@ -316,7 +347,7 @@ class QueryEnricher:
         cur.execute("SELECT * FROM groups WHERE id = ?", (group_id,))
         row = cur.fetchone()
         if not row:
-            return {"type": "group", "id": group_id, "found": False}
+            return self._enrich_group_internal(group_id)
 
         aliases = json.loads(row["aliases"]) if row["aliases"] else []
 
@@ -324,6 +355,7 @@ class QueryEnricher:
             "type": "group",
             "id": group_id,
             "found": True,
+            "source": "mitre",
             "name": row["name"],
             "description": row["description"] or "",
             "aliases": aliases,
@@ -358,13 +390,77 @@ class QueryEnricher:
 
         return data
 
+    def _enrich_group_internal(self, group_id: str) -> dict:
+        if not self._has_intel_groups:
+            return {"type": "group", "id": group_id, "found": False}
+
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM intel_groups WHERE id = ?", (group_id,))
+        row = cur.fetchone()
+        if not row:
+            return {"type": "group", "id": group_id, "found": False}
+
+        aliases = json.loads(row["aliases"]) if row["aliases"] else []
+        source = row["source"] or "opencti"
+
+        data = {
+            "type": "group",
+            "id": row["id"],
+            "found": True,
+            "source": source,
+            "name": row["name"],
+            "description": row["description"] or "",
+            "aliases": aliases,
+            "country": row["country"] or "",
+        }
+
+        if self._has_intel_group_tech:
+            cur.execute(
+                """
+                SELECT t.id, t.name_en, t.tactic_id
+                FROM techniques t
+                JOIN intel_group_techniques gt ON t.id = gt.technique_id
+                WHERE gt.group_id = ?
+                ORDER BY t.id
+                """,
+                (row["id"],),
+            )
+            data["techniques"] = [
+                {"id": r["id"], "name_en": r["name_en"], "tactic_id": r["tactic_id"] or ""}
+                for r in cur.fetchall()
+            ]
+        else:
+            data["techniques"] = []
+
+        if self._has_intel_sw_tech and self._has_intel_group_tech and self._has_intel_software:
+            cur.execute(
+                """
+                SELECT DISTINCT s.id, s.name, s.type
+                FROM intel_software s
+                JOIN intel_software_techniques st ON s.id = st.software_id
+                JOIN intel_group_techniques gt ON st.technique_id = gt.technique_id
+                WHERE gt.group_id = ?
+                ORDER BY s.name
+                LIMIT 20
+                """,
+                (row["id"],),
+            )
+            data["software"] = [
+                {"id": r["id"], "name": r["name"], "type": r["type"]}
+                for r in cur.fetchall()
+            ]
+        else:
+            data["software"] = []
+
+        return data
+
     def _enrich_software(self, soft_id: str) -> dict:
         """Обогащение MITRE Software (malware/tool)."""
         cur = self.conn.cursor()
         cur.execute("SELECT * FROM software WHERE id = ?", (soft_id,))
         row = cur.fetchone()
         if not row:
-            return {"type": "software", "id": soft_id, "found": False}
+            return self._enrich_software_internal(soft_id)
 
         aliases = json.loads(row["aliases"]) if row["aliases"] else []
 
@@ -372,6 +468,7 @@ class QueryEnricher:
             "type": "software",
             "id": soft_id,
             "found": True,
+            "source": "mitre",
             "name": row["name"],
             "software_type": row["type"],
             "description": row["description"] or "",
@@ -402,6 +499,67 @@ class QueryEnricher:
         data["used_by_groups"] = [
             {"id": r["id"], "name": r["name"]} for r in cur.fetchall()
         ]
+
+        return data
+
+    def _enrich_software_internal(self, soft_id: str) -> dict:
+        if not self._has_intel_software:
+            return {"type": "software", "id": soft_id, "found": False}
+
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM intel_software WHERE id = ?", (soft_id,))
+        row = cur.fetchone()
+        if not row:
+            return {"type": "software", "id": soft_id, "found": False}
+
+        aliases = json.loads(row["aliases"]) if row["aliases"] else []
+        source = row["source"] or "opencti"
+
+        data = {
+            "type": "software",
+            "id": row["id"],
+            "found": True,
+            "source": source,
+            "name": row["name"],
+            "software_type": row["type"],
+            "description": row["description"] or "",
+            "aliases": aliases,
+        }
+
+        if self._has_intel_sw_tech:
+            cur.execute(
+                """
+                SELECT t.id, t.name_en, t.tactic_id
+                FROM techniques t
+                JOIN intel_software_techniques st ON t.id = st.technique_id
+                WHERE st.software_id = ?
+                ORDER BY t.id
+                """,
+                (row["id"],),
+            )
+            data["techniques"] = [
+                {"id": r["id"], "name_en": r["name_en"], "tactic_id": r["tactic_id"] or ""}
+                for r in cur.fetchall()
+            ]
+        else:
+            data["techniques"] = []
+
+        if self._has_intel_sw_tech and self._has_intel_group_tech and self._has_intel_groups:
+            cur.execute(
+                """
+                SELECT DISTINCT g.id, g.name
+                FROM intel_groups g
+                JOIN intel_group_techniques gt ON g.id = gt.group_id
+                JOIN intel_software_techniques st ON gt.technique_id = st.technique_id
+                WHERE st.software_id = ?
+                ORDER BY g.name
+                LIMIT 20
+                """,
+                (row["id"],),
+            )
+            data["used_by_groups"] = [{"id": r["id"], "name": r["name"]} for r in cur.fetchall()]
+        else:
+            data["used_by_groups"] = []
 
         return data
 
@@ -495,7 +653,7 @@ class QueryEnricher:
 
             parts.append(part)
 
-        header = "=== ENRICHMENT CONTEXT (from verified MITRE ATT&CK database) ===\n\n"
+        header = "=== ENRICHMENT CONTEXT (MITRE ATT&CK + internal intelligence layer) ===\n\n"
         return header + "\n---\n\n".join(parts)
 
     def _format_technique_context(self, e: dict) -> str:
@@ -568,6 +726,8 @@ class QueryEnricher:
         lines = [
             f"MITRE ATT&CK Group: {e['id']} — {e['name']}",
         ]
+        if e.get("source"):
+            lines.append(f"Источник: {e['source']}")
         if e.get("aliases"):
             lines.append(f"Алиасы: {', '.join(e['aliases'][:10])}")
         if e.get("country"):
@@ -596,6 +756,8 @@ class QueryEnricher:
         lines = [
             f"MITRE ATT&CK Software: {e['id']} — {e['name']} (type: {e.get('software_type', '?')})",
         ]
+        if e.get("source"):
+            lines.append(f"Источник: {e['source']}")
         if e.get("aliases"):
             lines.append(f"Алиасы: {', '.join(e['aliases'][:10])}")
         if e.get("description"):

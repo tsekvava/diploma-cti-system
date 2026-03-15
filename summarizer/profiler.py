@@ -84,7 +84,7 @@ class Profiler:
 
         # [1] Нормализация и определение
         norm_result = self.normalizer.normalize_threat_actor(query)
-        if not norm_result:
+        if not norm_result.get("normalized"):
             # Попробуем через enricher
             enrichment = self.enricher.enrich(query)
             detected = enrichment.get("detected", [])
@@ -156,7 +156,7 @@ class Profiler:
 
         # [1] Нормализация
         norm_result = self.normalizer.normalize_software(query)
-        if not norm_result:
+        if not norm_result.get("normalized"):
             enrichment = self.enricher.enrich(query)
             detected = enrichment.get("detected", [])
             soft_items = [d for d in detected if d["type"] == "software_id"]

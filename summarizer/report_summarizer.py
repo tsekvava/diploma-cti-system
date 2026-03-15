@@ -154,7 +154,7 @@ class ReportSummarizer:
     #  ЭТАП 2: LLM-экстракция сущностей
     # ──────────────────────────────────────────────
 
-    def _extract_entities_llm(self, text: str) -> dict:
+    def _extract_entities_llm(self, text: str, internal_intel_context: str = "") -> dict:
         """Фаза 2: LLM извлекает семантические сущности с confidence."""
         print("   [2/7] LLM-экстракция сущностей...")
 
@@ -169,6 +169,13 @@ class ReportSummarizer:
         for i, chunk in enumerate(chunks):
             print(f"         Чанк {i + 1}/{len(chunks)}...")
             prompt = self._extract_prompt.replace("{text}", chunk)
+            if internal_intel_context:
+                prompt += (
+                    "\n\n### Additional reference context\n"
+                    f"{internal_intel_context}\n"
+                    "Use this context only as supporting evidence. "
+                    "Extract entities ONLY if they are present in the report chunk."
+                )
 
             try:
                 response = ollama.chat(
@@ -510,8 +517,10 @@ class ReportSummarizer:
 
     def _build_json_output(self, normalized: dict, kill_chain: dict,
                             overall_conf: int, summary_en: str,
-                            source: str, processing_time: float) -> dict:
+                            source: str, processing_time: float,
+                            input_metadata: Optional[dict] = None) -> dict:
         """Формирует JSON-выход для OpenCTI."""
+        input_metadata = input_metadata or {}
 
         # Threat actors
         actors_json = []
@@ -522,6 +531,7 @@ class ReportSummarizer:
                 "aliases": a.get("aliases", []),
                 "confidence": a.get("confidence", 0),
                 "normalized": a.get("normalized", False),
+                "source": a.get("source", "mitre" if a.get("normalized") else "none"),
             })
 
         # Malware
@@ -533,6 +543,7 @@ class ReportSummarizer:
                 "type": m.get("type", "malware"),
                 "confidence": m.get("confidence", 0),
                 "normalized": m.get("normalized", False),
+                "source": m.get("source", "mitre" if m.get("normalized") else "none"),
             })
 
         # Tools
@@ -543,6 +554,7 @@ class ReportSummarizer:
                 "mitre_id": t.get("mitre_id"),
                 "confidence": t.get("confidence", 0),
                 "normalized": t.get("normalized", False),
+                "source": t.get("source", "mitre" if t.get("normalized") else "none"),
             })
 
         # IoC
@@ -558,6 +570,11 @@ class ReportSummarizer:
                 "analysis_date": datetime.now().isoformat(),
                 "model": self.model_name,
                 "processing_time_sec": round(processing_time, 2),
+                "input_format": input_metadata.get("input_format", "text"),
+                "pages": int(input_metadata.get("pages", 1)),
+                "ocr_used": bool(input_metadata.get("ocr_used", False)),
+                "parse_warnings": input_metadata.get("parse_warnings", []),
+                "warnings": input_metadata.get("warnings", []),
             },
             "summary": summary_en,
             "threat_actors": actors_json,
@@ -574,13 +591,19 @@ class ReportSummarizer:
     #  ОСНОВНОЙ МЕТОД
     # ──────────────────────────────────────────────
 
-    def process(self, text: str, source: str = "unknown") -> dict:
+    def process(self, text: str, source: str = "unknown", input_metadata: Optional[dict] = None) -> dict:
         """
         Полный пайплайн обработки CTI-отчёта.
 
         Args:
             text: Текст отчёта (plain text, уже очищенный от HTML)
             source: Имя файла/источника (для метаданных)
+            input_metadata: {
+                "input_format": str,
+                "pages": int,
+                "ocr_used": bool,
+                "parse_warnings": list[str]
+            }
 
         Returns:
             {
@@ -597,12 +620,15 @@ class ReportSummarizer:
         print(f"{'=' * 60}\n")
 
         start_time = time.time()
+        input_metadata = dict(input_metadata or {})
+        all_warnings = list(input_metadata.get("parse_warnings", []))
 
         # Этап 1: Regex IoC
         ioc_data = self._extract_ioc_regex(text)
 
         # Этап 2: LLM-экстракция
-        llm_data = self._extract_entities_llm(text)
+        internal_context = self.normalizer.build_internal_intel_context(text, limit=14)
+        llm_data = self._extract_entities_llm(text, internal_intel_context=internal_context)
 
         # Объединяем regex + LLM
         combined = {
@@ -618,7 +644,16 @@ class ReportSummarizer:
         normalized = self._normalize_entities(combined)
 
         # Этап 4: Kill Chain
-        kill_chain = self._map_kill_chain(text)
+        try:
+            kill_chain = self._map_kill_chain(text)
+        except Exception as e:
+            warning = f"Kill Chain mapper failed: {e}"
+            print(f"   [4/7] [!] {warning}")
+            kill_chain = {"kill_chain_phases": [], "warnings": [warning]}
+
+        if kill_chain.get("warnings"):
+            all_warnings.extend(kill_chain.get("warnings", []))
+        all_warnings = list(dict.fromkeys(all_warnings))
 
         # Этап 5: Confidence
         raw_conf = llm_data.get("_raw_with_confidence", {})
@@ -640,6 +675,13 @@ class ReportSummarizer:
         json_output = self._build_json_output(
             normalized, kill_chain, overall_conf,
             summary_en, source, processing_time,
+            input_metadata={
+                "input_format": input_metadata.get("input_format", "text"),
+                "pages": input_metadata.get("pages", 1),
+                "ocr_used": input_metadata.get("ocr_used", False),
+                "parse_warnings": input_metadata.get("parse_warnings", []),
+                "warnings": all_warnings,
+            },
         )
 
         return {

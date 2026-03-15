@@ -48,6 +48,14 @@ class EntityNormalizer:
         conn.row_factory = sqlite3.Row
         return conn
 
+    @staticmethod
+    def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+        row = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?",
+            (table_name,),
+        ).fetchone()
+        return row is not None
+
     def _load_lookup_tables(self):
         """Загружает справочники в память для быстрого поиска."""
         conn = self._get_conn()
@@ -124,6 +132,65 @@ class EntityNormalizer:
                     "parent_technique_id": row["parent_technique_id"] or "",
                 }
 
+            # --- Internal Intel Layer (OpenCTI sync) ---
+            self._intel_groups = {}
+            self._intel_group_aliases = {}
+            self._intel_group_names = []
+
+            self._intel_software = {}
+            self._intel_software_aliases = {}
+            self._intel_software_names = []
+
+            if self._table_exists(conn, "intel_groups"):
+                for row in conn.execute(
+                    "SELECT id, name, aliases, description, country, source FROM intel_groups"
+                ):
+                    name = row["name"]
+                    entity_id = row["id"]
+                    aliases = json.loads(row["aliases"]) if row["aliases"] else []
+                    source = row["source"] or "opencti"
+
+                    entry = {
+                        "mitre_id": entity_id,
+                        "name": name,
+                        "aliases": aliases,
+                        "description": (row["description"] or "")[:500],
+                        "country": row["country"] or "",
+                        "source": source,
+                    }
+
+                    self._intel_groups[name.lower()] = entry
+                    self._intel_group_names.append(name)
+
+                    for alias in aliases:
+                        self._intel_group_aliases[str(alias).lower()] = entity_id
+                    self._intel_group_aliases[entity_id.lower()] = entity_id
+
+            if self._table_exists(conn, "intel_software"):
+                for row in conn.execute(
+                    "SELECT id, name, type, aliases, description, source FROM intel_software"
+                ):
+                    name = row["name"]
+                    entity_id = row["id"]
+                    aliases = json.loads(row["aliases"]) if row["aliases"] else []
+                    source = row["source"] or "opencti"
+
+                    entry = {
+                        "mitre_id": entity_id,
+                        "name": name,
+                        "type": row["type"] or "malware",
+                        "aliases": aliases,
+                        "description": (row["description"] or "")[:500],
+                        "source": source,
+                    }
+
+                    self._intel_software[name.lower()] = entry
+                    self._intel_software_names.append(name)
+
+                    for alias in aliases:
+                        self._intel_software_aliases[str(alias).lower()] = entity_id
+                    self._intel_software_aliases[entity_id.lower()] = entity_id
+
         finally:
             conn.close()
 
@@ -133,6 +200,11 @@ class EntityNormalizer:
             f"{len(self._software)} software, "
             f"{len(self._techniques)} техник"
         )
+        if self._intel_groups or self._intel_software:
+            stats += (
+                f", internal intel: {len(self._intel_groups)} групп, "
+                f"{len(self._intel_software)} software"
+            )
         print(f"   [{stats}]")
 
     def normalize_threat_actor(self, name: str) -> dict:
@@ -157,7 +229,7 @@ class EntityNormalizer:
         # Уровень 1: Exact match
         if name_lower in self._groups:
             entry = self._groups[name_lower]
-            return self._make_result(entry, original, "exact", 100, confidence_bonus=10)
+            return self._make_result(entry, original, "exact", 100, confidence_bonus=10, source="mitre")
 
         # Уровень 2: Alias match
         if name_lower in self._group_aliases:
@@ -165,7 +237,7 @@ class EntityNormalizer:
             # Найти entry по ID
             for entry in self._groups.values():
                 if entry["mitre_id"] == group_id:
-                    return self._make_result(entry, original, "alias", 100, confidence_bonus=5)
+                    return self._make_result(entry, original, "alias", 100, confidence_bonus=5, source="mitre")
 
         # Уровень 3: Fuzzy match
         if self._group_names:
@@ -177,7 +249,29 @@ class EntityNormalizer:
             if match:
                 matched_name, score, _ = match
                 entry = self._groups[matched_name.lower()]
-                return self._make_result(entry, original, "fuzzy", score, confidence_bonus=0)
+                return self._make_result(entry, original, "fuzzy", score, confidence_bonus=0, source="mitre")
+
+        # Internal intel fallback: exact -> alias -> fuzzy
+        if name_lower in self._intel_groups:
+            entry = self._intel_groups[name_lower]
+            return self._make_result(entry, original, "exact", 100, confidence_bonus=8, source=entry.get("source", "opencti"))
+
+        if name_lower in self._intel_group_aliases:
+            group_id = self._intel_group_aliases[name_lower]
+            for entry in self._intel_groups.values():
+                if entry["mitre_id"] == group_id:
+                    return self._make_result(entry, original, "alias", 100, confidence_bonus=4, source=entry.get("source", "opencti"))
+
+        if self._intel_group_names:
+            match = process.extractOne(
+                original, self._intel_group_names,
+                scorer=fuzz.token_sort_ratio,
+                score_cutoff=FUZZY_THRESHOLD
+            )
+            if match:
+                matched_name, score, _ = match
+                entry = self._intel_groups[matched_name.lower()]
+                return self._make_result(entry, original, "fuzzy", score, confidence_bonus=0, source=entry.get("source", "opencti"))
 
         # Не найдено
         return {
@@ -189,6 +283,7 @@ class EntityNormalizer:
             "match_type": "none",
             "match_score": 0,
             "original": original,
+            "source": "none",
         }
 
     def normalize_software(self, name: str) -> dict:
@@ -202,14 +297,14 @@ class EntityNormalizer:
         # Exact match
         if name_lower in self._software:
             entry = self._software[name_lower]
-            return self._make_sw_result(entry, original, "exact", 100, confidence_bonus=10)
+            return self._make_sw_result(entry, original, "exact", 100, confidence_bonus=10, source="mitre")
 
         # Alias match
         if name_lower in self._software_aliases:
             sw_id = self._software_aliases[name_lower]
             for entry in self._software.values():
                 if entry["mitre_id"] == sw_id:
-                    return self._make_sw_result(entry, original, "alias", 100, confidence_bonus=5)
+                    return self._make_sw_result(entry, original, "alias", 100, confidence_bonus=5, source="mitre")
 
         # Fuzzy match
         if self._software_names:
@@ -221,7 +316,28 @@ class EntityNormalizer:
             if match:
                 matched_name, score, _ = match
                 entry = self._software[matched_name.lower()]
-                return self._make_sw_result(entry, original, "fuzzy", score, confidence_bonus=0)
+                return self._make_sw_result(entry, original, "fuzzy", score, confidence_bonus=0, source="mitre")
+
+        if name_lower in self._intel_software:
+            entry = self._intel_software[name_lower]
+            return self._make_sw_result(entry, original, "exact", 100, confidence_bonus=8, source=entry.get("source", "opencti"))
+
+        if name_lower in self._intel_software_aliases:
+            sw_id = self._intel_software_aliases[name_lower]
+            for entry in self._intel_software.values():
+                if entry["mitre_id"] == sw_id:
+                    return self._make_sw_result(entry, original, "alias", 100, confidence_bonus=4, source=entry.get("source", "opencti"))
+
+        if self._intel_software_names:
+            match = process.extractOne(
+                original, self._intel_software_names,
+                scorer=fuzz.token_sort_ratio,
+                score_cutoff=FUZZY_THRESHOLD
+            )
+            if match:
+                matched_name, score, _ = match
+                entry = self._intel_software[matched_name.lower()]
+                return self._make_sw_result(entry, original, "fuzzy", score, confidence_bonus=0, source=entry.get("source", "opencti"))
 
         return {
             "name": original,
@@ -233,6 +349,7 @@ class EntityNormalizer:
             "match_type": "none",
             "match_score": 0,
             "original": original,
+            "source": "none",
         }
 
     def validate_technique_id(self, technique_id: str) -> Optional[dict]:
@@ -333,7 +450,7 @@ class EntityNormalizer:
 
     @staticmethod
     def _make_result(entry: dict, original: str, match_type: str,
-                     score: float, confidence_bonus: int) -> dict:
+                     score: float, confidence_bonus: int, source: str) -> dict:
         return {
             "name": entry["name"],
             "mitre_id": entry["mitre_id"],
@@ -343,11 +460,12 @@ class EntityNormalizer:
             "match_type": match_type,
             "match_score": round(score, 1),
             "original": original,
+            "source": source,
         }
 
     @staticmethod
     def _make_sw_result(entry: dict, original: str, match_type: str,
-                        score: float, confidence_bonus: int) -> dict:
+                        score: float, confidence_bonus: int, source: str) -> dict:
         return {
             "name": entry["name"],
             "mitre_id": entry["mitre_id"],
@@ -358,7 +476,51 @@ class EntityNormalizer:
             "match_type": match_type,
             "match_score": round(score, 1),
             "original": original,
+            "source": source,
         }
+
+    def build_internal_intel_context(self, text: str, limit: int = 12) -> str:
+        """Формирует компактный контекст из internal intel для LLM-экстракции."""
+        if not text or (not self._intel_groups and not self._intel_software):
+            return ""
+
+        text_lower = text.lower()
+        hits = []
+        seen = set()
+
+        def _match_name_or_alias(name: str, aliases: list[str]) -> bool:
+            if name and len(name.strip()) >= 4 and name.lower() in text_lower:
+                return True
+            for alias in aliases or []:
+                alias_s = str(alias).strip().lower()
+                if len(alias_s) >= 4 and alias_s in text_lower:
+                    return True
+            return False
+
+        for entry in self._intel_groups.values():
+            if _match_name_or_alias(entry["name"], entry.get("aliases", [])):
+                key = ("group", entry["mitre_id"])
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("group", entry))
+
+        for entry in self._intel_software.values():
+            if _match_name_or_alias(entry["name"], entry.get("aliases", [])):
+                key = ("software", entry["mitre_id"])
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(("software", entry))
+
+        if not hits:
+            return ""
+
+        lines = ["Known entities from internal intel (OpenCTI-synced):"]
+        for kind, entry in hits[:limit]:
+            aliases = entry.get("aliases", [])[:5]
+            aliases_str = f" aliases: {', '.join(aliases)}" if aliases else ""
+            lines.append(f"- {kind}: {entry['name']} ({entry['mitre_id']}){aliases_str}")
+
+        return "\n".join(lines)
 
 
 # --- CLI тестирование ---
