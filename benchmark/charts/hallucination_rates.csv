@@ -1,0 +1,10 @@
+model,hallucinated,total_t_codes,rate_pct
+AlienCyber,0,12,0.0
+DeepSeek-16B,0,12,0.0
+Gemma2-9B,0,12,0.0
+GLM4-9B,0,12,0.0
+Llama3.1-8B,0,12,0.0
+Mistral-7B,0,12,0.0
+QwenCyber-14B,0,12,0.0
+Qwen2.5-14B,0,12,0.0
+Qwen2.5-7B,0,12,0.0

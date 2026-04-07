@@ -604,14 +604,40 @@ class QueryEnricher:
         }
 
     def _enrich_cve(self, cve_id: str) -> dict:
-        """Обогащение CVE (пока без локальной БД NVD, базовая информация)."""
-        # TODO: Добавить NVD JSON feeds для полного описания CVE (Phase 2)
+        """Обогащение CVE из локальной NVD SQLite базы."""
+        try:
+            from knowledge_base.nvd_db import NVDDatabase
+            nvd = NVDDatabase()
+            data = nvd.lookup(cve_id)
+            nvd.close()
+        except Exception:
+            data = None
+
+        if not data:
+            return {
+                "type": "cve",
+                "id": cve_id,
+                "found": True,
+                "description": "",
+                "cvss3_score": None,
+                "cvss3_severity": None,
+                "note": "CVE not found in local NVD database. "
+                        "Use 'python3 -m knowledge_base.nvd_db --fetch " + cve_id + "' to download.",
+            }
+
         return {
             "type": "cve",
             "id": cve_id,
             "found": True,
-            "note": "CVE enrichment from local NVD database planned for Phase 2. "
-                    "Currently provides identifier only.",
+            "description": data.get("description", ""),
+            "cvss3_score": data.get("cvss3_score"),
+            "cvss3_vector": data.get("cvss3_vector"),
+            "cvss3_severity": data.get("cvss3_severity"),
+            "cvss2_score": data.get("cvss2_score"),
+            "cwe_ids": data.get("cwe_ids", []),
+            "affected": data.get("affected", [])[:5],
+            "published": data.get("published"),
+            "references": data.get("references", [])[:3],
         }
 
     # ──────────────────────────────────────────────
@@ -647,7 +673,15 @@ class QueryEnricher:
             elif etype == "data_source":
                 part = self._format_data_source_context(e)
             elif etype == "cve":
-                part = f"CVE: {e['id']}\n{e.get('note', '')}\n"
+                part = f"CVE: {e['id']}\n"
+                if e.get("description"):
+                    part += f"Description: {e['description']}\n"
+                if e.get("cvss3_score"):
+                    part += f"CVSS 3.x: {e['cvss3_score']} ({e.get('cvss3_severity', '')})\n"
+                if e.get("cwe_ids"):
+                    part += f"CWE: {', '.join(e['cwe_ids'])}\n"
+                if e.get("note"):
+                    part += f"{e['note']}\n"
             else:
                 part = f"[{etype}] {e.get('id', '?')}\n"
 

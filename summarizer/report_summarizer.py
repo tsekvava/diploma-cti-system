@@ -560,9 +560,28 @@ class ReportSummarizer:
         # IoC
         indicators = normalized.get("indicators", {})
 
-        # CVE
-        vulns = [{"id": cve, "confidence": 100, "source": "regex"}
-                 for cve in normalized.get("vulnerabilities", [])]
+        # CVE — обогащение из NVD
+        raw_cves = normalized.get("vulnerabilities", [])
+        vulns = []
+        nvd_data = {}
+        if raw_cves:
+            try:
+                from knowledge_base.nvd_db import NVDDatabase
+                nvd = NVDDatabase()
+                nvd_data = nvd.lookup_many(raw_cves)
+                nvd.close()
+            except Exception:
+                pass
+
+        for cve in raw_cves:
+            entry = {"id": cve, "confidence": 100, "source": "regex"}
+            nvd_info = nvd_data.get(cve.upper())
+            if nvd_info:
+                entry["cvss3_score"] = nvd_info.get("cvss3_score")
+                entry["cvss3_severity"] = nvd_info.get("cvss3_severity")
+                entry["description"] = nvd_info.get("description", "")[:300]
+                entry["cwe_ids"] = nvd_info.get("cwe_ids", [])
+            vulns.append(entry)
 
         return {
             "metadata": {
@@ -591,7 +610,7 @@ class ReportSummarizer:
     #  ОСНОВНОЙ МЕТОД
     # ──────────────────────────────────────────────
 
-    def process(self, text: str, source: str = "unknown", input_metadata: Optional[dict] = None) -> dict:
+    def process(self, text: str, source: str = "unknown", input_metadata: Optional[dict] = None, rag_context: str = "") -> dict:
         """
         Полный пайплайн обработки CTI-отчёта.
 
@@ -628,6 +647,9 @@ class ReportSummarizer:
 
         # Этап 2: LLM-экстракция
         internal_context = self.normalizer.build_internal_intel_context(text, limit=14)
+        if rag_context:
+            internal_context = f"{internal_context}\n\n{rag_context}" if internal_context else rag_context
+            print(f"   [2/7] RAG-контекст добавлен ({len(rag_context)} симв.)")
         llm_data = self._extract_entities_llm(text, internal_intel_context=internal_context)
 
         # Объединяем regex + LLM

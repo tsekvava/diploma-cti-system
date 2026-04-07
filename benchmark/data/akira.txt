@@ -1,0 +1,365 @@
+Threat Assessment: Howling Scorpius (Akira Ransomware)
+
+Author: Yoav Zemah
+Publication Date: December 2, 2024
+Source: Unit 42, Palo Alto Networks
+
+
+EXECUTIVE SUMMARY
+
+Howling Scorpius, a ransomware group active since early 2023, operates the Akira ransomware-as-a-service (RaaS). The group consistently ranks among the top five most active ransomware operators and employs a double extortion strategy that significantly amplifies threat severity.
+
+The group targets small to medium-sized businesses in North America, Europe, and Australia across diverse sectors including education, consulting, government, manufacturing, telecommunications, technology, and pharmaceuticals.
+
+Unit 42 researchers have identified that Howling Scorpius maintains encryptors for Windows and Linux operating systems, with variants specifically designed for ESXi hosts. The group actively upgrades and enhances its toolkit, presenting an escalating risk to organizations.
+
+
+HOWLING SCORPIUS OVERVIEW
+
+First observed in March 2023, Akira implements a double extortion methodology: data exfiltration precedes encryption, allowing the threat actors to leak stolen data even if victims restore systems without paying ransom demands.
+
+The group operates a Tor-based leak site displaying victim information and a separate negotiation site accessible via group-provided passwords. The leak site features a retro-green aesthetic and includes command functionality:
+- The "leaks" command returns non-paying victims with .torrent file links
+- The "news" command lists compromised companies dating to April 2023
+
+
+TARGETED REGIONS
+
+Analysis of Akira leak site data from March 2023 through October 2024 reveals:
+- Most impacted country: United States
+- Secondary targets: Canada, United Kingdom, Australia, Germany
+- Pattern: Global distribution with North American concentration
+
+
+TARGETED INDUSTRIES
+
+Top affected sectors include:
+1. Manufacturing
+2. Professional and legal services
+3. Wholesale/retail
+4. Construction
+5. Healthcare
+6. Financial services
+7. Education
+8. Technology
+9. Government
+10. Telecommunications
+
+
+TECHNICAL ANALYSIS: ATTACK LIFECYCLE
+
+Initial Access
+
+Howling Scorpius affiliates employ multiple vectors:
+
+VPN Exploitation: Targets vulnerable VPN services lacking multi-factor authentication, often using credentials purchased from initial access brokers.
+
+External-Facing Services: Remote Desktop Protocol (RDP) and other exposed services.
+
+Spear Phishing Campaigns: Targeted email-based attacks.
+
+Vulnerability Exploitation: Documented exploitation of Cisco products including CVE-2020-3259 and CVE-2023-20269.
+
+
+Credentials Access
+
+Local Credential Extraction:
+- Mimikatz deployment
+- LaZagne usage
+- LSASS memory dumps via comsvcs.dll
+
+Kerberoasting Attacks: Target service accounts and exploit credentials stored in memory.
+
+Domain Control Extraction:
+- SYSTEM registry hive copying
+- NTDS.dit file exfiltration from domain controllers
+- Complete user account and password hash enumeration
+
+Compromised vCenter Exploitation:
+- Domain controller virtual machine shutdown
+- VMDK file copying to attacker-controlled VMs
+- NTDT.dit and SYSTEM registry hive extraction
+
+
+Persistence
+
+The group creates new domain accounts to establish persistent access without requiring tool deployment. CISA documented creation of administrative domain accounts named "itadm."
+
+
+Discovery and Lateral Movement
+
+Network Reconnaissance:
+- NetScan deployment
+- Advanced IP Scanner usage
+- PowerShell-based Active Directory enumeration
+- Windows Net Commands for user/administrator discovery
+
+Lateral Movement Methods:
+- Remote Desktop Protocol (RDP)
+- Server Message Block (SMB)
+- Remote service creation
+- Windows Management Instrumentation (WMI)
+
+
+Defense Evasion
+
+Bring Your Own Driver (BYOD):
+The group abuses the Zemana antimalware driver to terminate antimalware-related processes, bypassing traditional security detection.
+
+Antivirus Disablement:
+- Windows Defender Real-Time Protection disabling via PowerShell
+- EDR agent uninstallation
+
+Bring Your Own VM:
+Attackers create custom virtual machines with disabled security tools, mount hypervisor storage drives, and execute ransomware within the new VM to circumvent host security controls.
+
+
+Exfiltration
+
+Data exfiltration methodology combines multiple tools:
+- WinRAR: File compression
+- WinSCP/RClone/FileZilla: File transfer
+- FTP Protocol: Primary exfiltration transport
+
+Example command observed:
+"C:\\Program Files\\WinRAR\\WinRAR.exe" a -ep1 -scul -r0 -iext -imon1 -- . "[REDACTED]\\Company\\[REDACTED]" [REDACTED]\\Company\\HR "[REDACTED]\\Company\\Human Resources Management - HR"
+
+
+AKIRA RANSOMWARE ENCRYPTORS
+
+Ransom Note
+
+Upon successful encryption, the malware creates "akira_readme.txt" containing:
+- Leak site links
+- Negotiation site information
+- Unique victim code for communicating with attackers
+
+
+Windows Variant
+
+Execution:
+The variant attempts to delete shadow copies using:
+powershell.exe -Command "Get-WmiObject Win32_Shadowcopy | Remove-WmiObject"
+
+Command-Line Arguments:
+- -p/--encryption_path: Root directory for encryption
+- -s/--share_file: Targeted network drive path
+- -n/--encryption_percent: Data encryption percentage per file
+- --fork: Child process creation
+- -l: Drive list logging
+- -localonly: Remote drive exclusion
+- -e/--exclude: File exclusion specification
+
+Encryption Implementation:
+- Algorithm: ChaCha20 for file content
+- Key management: ChaCha20 key encrypted with hard-coded RSA public key
+- Support: Full and partial encryption modes
+
+Vulnerability Response:
+Avast published a decryptor in June 2023 exploiting an encryption scheme vulnerability. Unit 42 identified samples indicating Howling Scorpius patched this vulnerability within three days of public disclosure.
+
+February 2024 Updates:
+- KCipher2 algorithm implementation alongside ChaCha20
+- Encrypted file extension: .akira
+
+
+Megazord Variant
+
+Emerged August 2023 as a Rust-written strain with:
+- Similar ransom note content referencing Akira negotiation sites
+- File extension: .powerranges
+- Ransom note filename: powerranges.txt
+- Password requirement via --id argument
+
+Command Execution:
+Megazord terminates extensive lists of services and processes that could impede encryption.
+
+March 2024 Updates:
+- --proc argument: Disable process/service termination
+- --dirs argument: Ignore blocklisted directories
+
+Operator Variation:
+One unique sample contained a different ransom note with Telegram contact information, suggesting possible use by different threat actors, though this remains unconfirmed.
+
+
+Linux/ESXi Variant
+
+Design Assessment:
+Internal strings and ESXCLI command execution indicate initial design for ESXi systems.
+
+Logging Disablement:
+/bin/sh -c 'esxcli system syslog config set --logdir=/tmp'
+/bin/sh -c 'esxcli system syslog reload'
+/bin/sh -c 'esxcli system coredump file set --unconfigure'
+
+Command-Line Arguments:
+- -p/--encryption_path: Root directory for encryption
+- -s/--share_file: Targeted network drive path
+- -n/--encryption_percent: Data encryption percentage per file
+- --fork: Child process creation
+
+Encryption Implementation:
+- Symmetric algorithms: AES, CAMELLIA, DES, IDEA
+- RSA public key wrapping of symmetric keys
+- Full and partial encryption support
+
+Targeted File Extensions:
+.vmdk, .vmem, .vmx, .log, .vswp, .vmsd, .vmsn
+
+
+Akira_v2 (Linux/ESXi Rust Variant)
+
+Released April 2024 with expanded capabilities.
+
+New Arguments:
+- --id: Password requirement for execution
+- --vmonly: VM-only encryption capability
+- --stopvm: Virtual machine shutdown functionality
+
+VM Shutdown Command:
+vim-cmd vmsvc/getallvms | tail -n +2 | awk '{system("vim-cmd vmsvc/power.off " $1)}'
+
+Targeted Extensions:
+.vmdk, .vmem, .vmx, .log, .vswp, .vmsd, .vmsn
+
+Ransom Note:
+Filename changed to akiranew.txt with .akiranew file extension, still referencing original negotiation site.
+
+
+INDICATORS OF COMPROMISE
+
+Windows Variant SHA256 Hashes
+08207409e1d789aea68419b04354184490ce46339be071c6c185c75ab9d08cba
+2727c73f3069457e9ad2197b3cda25aec864a2ab8da3c2790264d06e13d45c3d
+2db4a15475f382e34875b37d7b27c3935c7567622141bc203fde7fe602bc8643
+56f1014eb2d145c957f9bc0843f4e506735d7821e16355bcfbb6150b1b5f39db
+58e9cd249d947f829a6021cf6ab16c2ca8e83317dbe07a294e2035bb904d0cf3
+678ec8734367c7547794a604cc65e74a0f42320d85a6dce20c214e3b4536bb33
+1ba1ccfacffbb6be9480380f5535a30d3eee1dd7787f3c649ebf8ea2a6a5de51
+9f873c29a38dd265decb6517a2a1f3b5d4f90ccd42eb61039086ea0b5e74827e
+1b6af2fbbc636180dd7bae825486ccc45e42aefbb304d5f83fafca4d637c13cc
+cc970bd2673e46c7e0df5430ab617bc2a9214b4d5c2c44252af681a08ff526a8
+
+Megazord Variant SHA256 Hashes
+131da83b521f610819141d5c740313ce46578374abb22ef504a7593955a65f07
+28cea00267fa30fb63e80a3c3b193bd9cd2a3d46dd9ae6cede5f932ac15c7e2e
+2f629395fdfa11e713ea8bf11d40f6f240acf2f5fcf9a2ac50b6f7fbc7521c83
+68d5944d0419bd123add4e628c985f9cbe5362ee19597773baea565bff1a6f1a
+7f731cc11f8e4d249142e99a44b9da7a48505ce32c4ee4881041beeddb3760be
+8816caf03438cd45d7559961bf36a26f26464bab7a6339ce655b7fbad68bb439
+95477703e789e6182096a09bc98853e0a70b680a4f19fa2bf86cbb9280e8ec5a
+9585af44c3ff8fd921c713680b0c2b3bbc9d56add848ed62164f7c9b9f23d065
+9f393516edf6b8e011df6ee991758480c5b99a0efbfd68347786061f0e04426c
+a6b0847cf31ccc3f76538333498f8fef79d444a9d4ecfca0592861cf731ae6cb
+b55fbe9358dd4b5825ce459e84cd0823ecdf7b64550fe1af968306047b7de5c9
+c0c0b2306d31e8962973a22e50b18dfde852c6ddf99baf849e3384ed9f07a0d6
+c9c94ac5e1991a7db42c7973e328fceeb6f163d9f644031bdfd4123c7b3898b0
+dfe6fddc67bdc93b9947430b966da2877fda094edf3e21e6f0ba98a84bc53198
+e3fa93dad8fb8c3a6d9b35d02ce97c22035b409e0efc9f04372f4c1d6280a481
+0c0e0f9b09b80d87ebc88e2870907b6cacb4cd7703584baf8f2be1fd9438696d
+
+Linux/ESXi Variant SHA256 Hashes
+1d3b5c650533d13c81e325972a912e3ff8776e36e18bca966dae50735f8ab296
+300bc2769c6d62ba9d228cc45e126cd458e1a23fd23092da258053afd82f2755
+3805f299d33ef43d17a5a1040149f0e5e2d5db57ec6f03c5687ac23db1f77a30
+3999a25f8f0fd8252aa9250fa9bd70aae202f181812cc6c230c8ea2842340f18
+3dc7d4023c7380ed740ac5ac7d82a4ba6f587f430b2b7b66f1d34a44f89c39cb
+43c5a487329f5d6b4a6d02e2f8ef62744b850312c5cb87c0a414f3830767be72
+6005dcbe15d60293c556f05e98ed9a46d398a82e5ca4d00c91ebec68a209ea84
+74f497088b49b745e6377b32ed5d9dfaef3c84c7c0bb50fabf30363ad2e0bfb1
+7ca3e6b4dd4d98506faa92ab590108cacb2945b8c27dcf1ac75b0df4a206493a
+82e25f32e01f1898ccce2b6d5292245759733c22a104443a8a9c7db1ebf05c57
+8e9a33809b9062c5033928f82e8adacbef6cd7b40e73da9fcf13ec2493b4544c
+bcae978c17bcddc0bf6419ae978e3471197801c36f73cff2fc88cecbe3d88d1a
+5f72bdb14e138f10c1658248fdaf10db2fd1e812240966e009bbcf8d463e099c
+67f82a54ea49c6f286681d179cc7afc8b41b6b34284cc17bdd52916cc3656160
+6a5e547756ef1256f1eb9df0249245c35461affd009be8f046559bc007cafcf2
+e702a572b514984deacaa54408059c6eac28e46111cb6f0f4190a3a6a72dd41d
+
+Akira_v2 SHA256 Hashes
+0ee1d284ed663073872012c7bde7fac5ca1121403f1a5d2d5411317df282796c
+3298d203c2acb68c474e5fdad8379181890b4403d6491c523c13730129be3f75
+
+
+PROTECTION AND MITIGATION
+
+Palo Alto Networks provides defense through:
+
+- Advanced WildFire: Cloud-delivered malware analysis identifying known samples
+- Cortex XDR/XSIAM: Behavioral threat protection, machine learning-based detection, credential-based attack identification
+- Anti-Ransomware Module: Encryption-based activity targeting, pre-data-loss activity halting
+- Cortex Xpanse: Internet-exposed RDP and VPN detection
+
+
+MITRE ATT&CK TACTICS AND TECHNIQUES
+
+Initial Access:
+- T1190 - Exploit Public-Facing Application (CVE-2020-3259, CVE-2023-20269 on Cisco VPN)
+- T1078 - Valid Accounts (credentials from initial access brokers)
+- T1566 - Phishing (spear phishing campaigns)
+- T1133 - External Remote Services (RDP, VPN)
+
+Credential Access:
+- T1003.001 - OS Credential Dumping: LSASS Memory (comsvcs.dll)
+- T1003.002 - OS Credential Dumping: Security Account Manager (SYSTEM hive)
+- T1003.003 - OS Credential Dumping: NTDS (NTDS.dit exfiltration)
+- T1558.003 - Steal or Forge Kerberos Tickets: Kerberoasting
+- T1555 - Credentials from Password Stores (LaZagne)
+
+Persistence:
+- T1136.002 - Create Account: Domain Account (itadm)
+
+Discovery:
+- T1046 - Network Service Scanning (NetScan, Advanced IP Scanner)
+- T1018 - Remote System Discovery (PowerShell AD enumeration)
+- T1087 - Account Discovery (Windows Net Commands)
+
+Lateral Movement:
+- T1021.001 - Remote Services: Remote Desktop Protocol
+- T1021.002 - Remote Services: SMB/Windows Admin Shares
+- T1543 - Create or Modify System Process (remote service creation)
+- T1047 - Windows Management Instrumentation
+
+Defense Evasion:
+- T1562.001 - Impair Defenses: Disable or Modify Tools (Windows Defender, EDR)
+- T1068 - Exploitation for Privilege Escalation (Zemana driver abuse / BYOD)
+- T1564.006 - Hide Artifacts: Run Virtual Instance (Bring Your Own VM)
+
+Exfiltration:
+- T1560.001 - Archive Collected Data: Archive via Utility (WinRAR)
+- T1048.003 - Exfiltration Over Alternative Protocol: Exfiltration Over Unencrypted Non-C2 Protocol (FTP)
+- T1567 - Exfiltration Over Web Service (WinSCP, RClone, FileZilla)
+
+Impact:
+- T1486 - Data Encrypted for Impact (ChaCha20 + RSA, AES/CAMELLIA/DES/IDEA + RSA)
+- T1490 - Inhibit System Recovery (shadow copy deletion)
+- T1489 - Service Stop (Megazord terminates services/processes before encryption)
+
+
+VULNERABILITIES REFERENCED
+
+CVE-2020-3259 - Cisco ASA/FTD Information Disclosure vulnerability
+CVE-2023-20269 - Cisco ASA and FTD Unauthorized Remote Access vulnerability
+
+
+TOOLS USED BY THREAT ACTOR
+
+Credential Harvesting:
+- Mimikatz
+- LaZagne
+- comsvcs.dll (LSASS dump)
+
+Reconnaissance:
+- NetScan
+- Advanced IP Scanner
+- PowerShell Active Directory modules
+- Windows Net Commands
+
+Exfiltration:
+- WinRAR
+- WinSCP
+- RClone
+- FileZilla
+
+Other:
+- Zemana antimalware driver (abused for BYOD attack)

@@ -1,0 +1,387 @@
+Operation RoundPress targeting high-value webmail servers
+
+ESET Research
+By Matthieu Faou
+15 May 2025
+
+This blogpost introduces an operation that we named RoundPress, targeting high-value webmail servers with XSS vulnerabilities, and that we assess with medium confidence is run by the Sednit cyberespionage group. The ultimate goal of this operation is to steal confidential data from specific email accounts.
+
+
+KEY POINTS
+
+- In Operation RoundPress, the compromise vector is a spearphishing email leveraging an XSS vulnerability to inject malicious JavaScript code into the victim's webmail page.
+- In 2023, Operation RoundPress only targeted Roundcube, but in 2024 it expanded to other webmail software including Horde, MDaemon, and Zimbra.
+- For MDaemon, Sednit used a zero-day XSS vulnerability. We reported the vulnerability to the developers on November 1st, 2024 and it was patched in version 24.5.1.
+- Most victims are governmental entities and defense companies in Eastern Europe, although we have observed governments in Africa, Europe, and South America being targeted as well.
+- We provide an analysis of the JavaScript payloads SpyPress.HORDE, SpyPress.MDAEMON, SpyPress.ROUNDCUBE, and SpyPress.ZIMBRA.
+- These payloads are able to steal webmail credentials, and exfiltrate contacts and email messages from the victim's mailbox.
+- Additionally, SpyPress.MDAEMON is able to set up a bypass for two-factor authentication.
+
+
+SEDNIT PROFILE
+
+The Sednit group - also known as APT28, Fancy Bear, Forest Blizzard, or Sofacy - has been operating since at least 2004. The US Department of Justice named the group as one of those responsible for the Democratic National Committee (DNC) hack just before the 2016 US elections and linked the group to the GRU. The group is also presumed to be behind the hacking of global television network TV5Monde, the World Anti-Doping Agency (WADA) email leak, and many other incidents. Sednit has a diversified set of malware tools in its arsenal, several examples of which we have documented previously in our Sednit white paper from 2016.
+
+
+LINKS TO SEDNIT
+
+On September 29th, 2023, we detected a spearphishing email, part of Operation RoundPress, sent from katecohen1984@portugalmail[.]pt (envelope-from address). The email exploited CVE-2023-43770 in Roundcube. This email address is very similar to the ones used in other Sednit campaigns in 2023, as documented by Unit42 for example.
+
+Leveraging a network scan we ran in February 2022, we found the server 45.138.87[.]250 / ceriossl[.]info, which was configured in the same unique way as 77.243.181[.]238 / global-world-news[.]net. The former was mentioned in a Qianxin blogpost describing a campaign abusing CVE-2023-23397 that attributed it to Sednit. The latter is a domain used in Operation RoundPress in 2023.
+
+Given these two elements, we believe with medium confidence that Operation RoundPress is carried out by Sednit.
+
+
+VICTIMOLOGY
+
+Most of the targets are related to the current war in Ukraine; they are either Ukrainian governmental entities or defense companies in Bulgaria and Romania. Notably, some of these defense companies are producing Soviet-era weapons to be sent to Ukraine.
+
+Other targets include African, EU, and South American governments.
+
+Operation RoundPress victims in 2024:
+
+Date: 2024-05 | Country: Greece | Sector: National government
+Date: 2024-05 | Country: Romania | Sector: Unknown (VirusTotal submission)
+Date: 2024-05 | Country: Ukraine | Sector: Specialized Prosecutor's Office in the Field of Defense of the Western Region (VirusTotal submission)
+Date: 2024-06 | Country: Bulgaria | Sector: Telecommunications for the defense sector
+Date: 2024-06 | Country: Cameroon | Sector: National government
+Date: 2024-06 | Country: Ukraine | Sector: Military
+Date: 2024-07 | Country: Ecuador | Sector: Military
+Date: 2024-07 | Country: Ukraine | Sector: Regional government
+Date: 2024-07 | Country: Serbia | Sector: National government
+Date: 2024-09 | Country: Cyprus | Sector: An academic in environmental studies
+Date: 2024-09 | Country: Romania | Sector: Defense company
+Date: 2024-09 | Country: Ukraine | Sector: Military
+Date: 2024-10 | Country: Bulgaria | Sector: Defense company
+Date: 2024-11 | Country: Bulgaria | Sector: Defense company (not the same as in 2024-10)
+Date: 2024-11 | Country: Ukraine | Sector: Civil air transport company
+Date: 2024-11 | Country: Ukraine | Sector: Defense company
+Date: 2024-12 | Country: Ukraine | Sector: State company in the transportation sector
+
+
+COMPROMISE CHAIN
+
+Initial Access
+
+In 2023, Sednit was exploiting CVE-2020-35730, a known XSS vulnerability in Roundcube, which enables the loading of arbitrary JavaScript code in the context of the webmail window.
+
+In 2024, we observed different XSS vulnerabilities being used to target additional webmail software: Horde, MDaemon, and Zimbra. Sednit also started to use a more recent vulnerability in Roundcube, CVE-2023-43770. The MDaemon vulnerability (CVE-2024-11182, now patched) was a zero day, most likely discovered by Sednit, while the ones for Horde, Roundcube, and Zimbra were already known and patched.
+
+Sednit sends these XSS exploits by email. The exploits lead to the execution of malicious JavaScript code in the context of the webmail client web page running in a browser window. Therefore, only data accessible from the victim's account can be read and exfiltrated.
+
+Note that, in order for the exploit to work, the target must be convinced to open the email message in the vulnerable webmail portal. This means that the email needs to bypass any spam filtering and the subject line needs to be convincing enough to entice the target into reading the email message.
+
+Generally, the email message looks benign and contains text about news events. For example, on September 11th, 2024, a Ukrainian target received a phishing email from kyivinfo24@ukr[.]net with the subject "SBU arrested a banker who worked for enemy military intelligence in Kharkiv" (in Ukrainian). The message body contains excerpts and links to articles from Kyiv Post, a well-known newspaper in Ukraine. The malicious code that triggers the XSS vulnerability is inside the HTML code of the email message's body and is not directly visible to the user.
+
+Another example is an email from office@terembg[.]com to a Bulgarian target on November 8th, 2024, with the subject "Putin seeks Trump's acceptance of Russian conditions in bilateral relations" (in Bulgarian). The message body again contains excerpts and links to articles from News.bg, a legitimate Bulgarian newspaper.
+
+Note that some of these vulnerabilities are not of interest exclusively to this group: GreenCube (also known as UNC3707) and Winter Vivern have been exploiting them as well.
+
+
+Horde: Unknown exploit
+
+For targets using Horde webmail, we have seen Sednit using an old vulnerability. We were unable to find the exact vulnerability, but it appears to be an XSS flaw that was already fixed in the first version of Xss.php committed to GitHub, and in Horde Webmail 1.0, which was released in 2007.
+
+The intended exploit used by Sednit places malicious JavaScript code in the onerror attribute of an img element. Because the src attribute is x, an undefined value, onerror is called and the payload is base64 decoded and then evaluated using window.parent.eval.
+
+In Horde Webmail version 1.0, the XSS filter removes the style elements and the on* attributes, such as onerror. Thus, we believe that Sednit made a mistake and tried to use a nonworking exploit.
+
+
+MDaemon: CVE-2024-11182
+
+On November 1st, 2024, we detected an email message sent to two Ukrainian state-owned defense companies and a Ukrainian civil air transport company.
+
+This message exploited a zero-day XSS vulnerability in MDaemon Email Server, in the rendering of untrusted HTML code in email messages. We reported the vulnerability to the developers on November 1st, 2024 and it was patched in version 24.5.1, which was released on November 14th, 2024; we then issued CVE-2024-11182 for it.
+
+The exploit relies on a specially crafted img element, but uses a bug in the MDaemon HTML parser where a noembed end tag inserted within the title attribute of a p element tricks the parser into rendering the immediately succeeding img tag.
+
+Exploit code for CVE-2024-11182:
+<p title="</noembed><img src onerror=eval(atob(this.id)) id=...>
+
+
+Roundcube: CVE-2023-43770
+
+For targets using Roundcube webmail: in 2023, Sednit used the XSS vulnerability CVE-2020-35730, while in 2024, it switched to CVE-2023-43770.
+
+The more recent vulnerability was patched on September 14th, 2023 in a GitHub commit. The fix is in a regex in the rcube_string_replacer.php script.
+
+In rcube_string_replacer.php, URLs are converted to hyperlinks, and the hyperlink text is what is expected to be provided between the outer set of square brackets. The bug lies in the fact that the hyperlink text is not properly sanitized, allowing the characters < and >. This enables an attacker to provide JavaScript code contained between <script> and </script>, which is directly added to the page when the email is rendered in Roundcube.
+
+
+Zimbra: CVE-2024-27443 / ZBUG-3730
+
+For Zimbra, Sednit uses CVE-2024-27443 (also tracked as ZBUG-3730). It was patched on March 1st, 2024 in a GitHub commit, in the ZmInviteMsgView.js file. The vulnerability lies in failing to sanitize the cif (calendar intended for) attribute, in a calendar invitation sent by email.
+
+The cif attribute is populated from the email header X-Zimbra-Calendar-Intended-For. Before the patch, the value was directly added to the Zimbra HTML page without sanitization. This allowed the execution of malicious JavaScript code in the context of the webmail browser window.
+
+The exploit code found in this header:
+
+Zimbra Calendar<img/alt=''/src='Zimbra-Calendar'/onerror="window[(function(tmz){ghwa='cxe';return '\x65'+decodeURI('%76')+'\x61\x6c'})()](window[(function(jvqka){const kqd=decodeURI('%61')+'\t'+decodeURI('%6F')+'\x62'; oykbg='doix'; return kqd})()](frames[0].document.getElementById('a-cashed-skinLayout2')['\inn\e\r\T\e\xt']))">
+
+The beautified code contained in the onerror attribute:
+
+window['eval'](window[(function(jvqka){'atob'}()](frames[0].document.getElementById('a-cashed-skinLayout2')['innerText']))
+
+Basically, this reads the text contained in a div element, identified by ID a-cashed-skinLayout2, that is present in the body of the calendar invite. This div element uses the style attribute with the value display:none so that it is not visible to the target. The inner text contains base64-encoded JavaScript code that is run using eval.
+
+
+Persistence
+
+The JavaScript payloads (SpyPress) loaded by the XSS vulnerabilities don't have true persistence, but they are reloaded every time the victim opens the malicious email.
+
+In addition, we detected a few SpyPress.ROUNDCUBE payloads that have the ability to create Sieve rules. SpyPress.ROUNDCUBE creates a rule that will send a copy of every incoming email to an attacker-controlled email address. Sieve rules are a feature of Roundcube and therefore the rule will be executed even if the malicious script is no longer running.
+
+
+Credential Access
+
+All SpyPress payloads have the ability to steal webmail credentials by trying to trick the browser or password manager to fill webmail credentials into a hidden form. In addition, some samples also try to trick the victim by logging them out of their webmail account and displaying a fake login page.
+
+
+Collection and Exfiltration
+
+Most SpyPress payloads collect email messages and contact information from the victim's mailbox. The data is then exfiltrated via an HTTP POST request to a hardcoded C&C server.
+
+
+TOOLSET
+
+In 2024, we have observed Sednit using four payloads in Operation RoundPress: SpyPress.HORDE, SpyPress.MDAEMON, SpyPress.ROUNDCUBE, and SpyPress.ZIMBRA. They are injected into the victims' webmail context using XSS vulnerabilities.
+
+The four payloads have common characteristics. All are similarly obfuscated, with variable and function names replaced with random-looking strings. Furthermore, strings used by the code, such as webmail and C&C server URLs, are also obfuscated and contained in an encrypted list. Each of those strings is only decrypted when it is used. Note that the variable and function names are randomized for each sample, so the final SpyPress payloads will have different hashes.
+
+Another common characteristic is that there are no persistence or update mechanisms. The payload is fully contained in the email and only executed when the email message is viewed from a vulnerable webmail instance.
+
+All payloads communicate with their hardcoded C&C servers via HTTP POST requests. There is a small number of C&C servers that are shared by all payloads (there is no separation by victim or payload type).
+
+
+SpyPress.HORDE
+
+SpyPress.HORDE is the JavaScript payload injected into vulnerable Horde webmail instances.
+
+Capabilities:
+
+To steal credentials, SpyPress.HORDE creates two HTML input elements: horde_user and horde_pass. Their width and opacity are set to 0%, ensuring that they are not visible to the user. The goal is to trick browsers and password managers into filling those values. A callback for the change event is created on the input horde_pass. This calls the function input_password_on_change as soon as the input element loses focus after its value is changed.
+
+input_password_on_change exfiltrates the data by calling C2_POST_Request.
+
+Network protocol:
+
+The C&C URL is hardcoded in the script and the exfiltration is done via an HTTPS POST request. The body data has a specific format that is sent base64 encoded. For example, bWVAdmljdGltLm9yZyA6OiBweAoKbXl1c2VybmFtZSBteXBhc3N3b3Jk decodes to:
+
+me@victim.org :: px
+
+myusername mypassword
+
+where px probably means password exfiltration. Note that the HTTP request is made by the victim's browser, so HTTP headers such as the User-Agent will vary from victim to victim.
+
+
+SpyPress.MDAEMON
+
+SpyPress.MDAEMON is a JavaScript payload injected into vulnerable MDaemon webmail instances. It reveals more functionality than SpyPress.HORDE:
+
+- credential stealing (very similar to the SpyPress.HORDE implementation)
+- exfiltration of contacts and login history
+- exfiltration of email messages
+- exfiltration of the two-factor authentication secret
+- creation of an App Password, which enables attackers to access the mailbox from a mail application and to bypass 2FA protection
+
+Capabilities:
+
+Credential stealer: The credential stealer of SpyPress.MDAEMON is almost identical to that of SpyPress.HORDE. The only difference is the name of the input fields, which are User and Password, to match the official names used in the MDaemon software.
+
+Contacts and login history: SpyPress.MDAEMON obtains the victim's login history from https://<webmail_URL>/WorldClient.dll?Session=<session_ID>&View=Options-Authentication&GetLoginHistory=Yes, and exfiltrates the content to the hardcoded C&C server using message type ab. Then, the script obtains the victim's contact list from https://<webmail_URL>/WorldClient.dll?Session=<session_ID>&View=Contacts. This list, and the associated email addresses (in the eml JavaScript property), are then exfiltrated to the C&C server.
+
+Email message exfiltration: SpyPress.MDAEMON browses the victim's mailbox folders and filters out a hardcoded list of folders the attackers are not interested in: calendar, notes, documents, contacts, tasks, allowed senders, and blocked senders.
+
+For each folder, SpyPress.MDAEMON iterates over the pages and then over all messages in each page. To get a list of email messages in a given folder page, SpyPress.MDAEMON fetches:
+https://<webmail_URL>/WorldClient.dll?Session=<session_ID>&View=List&ReturnJavaScript=1&FolderID=<folder_ID>&Sort=RevDate&Page=<page>&UTF8=1
+
+It then fetches the source of each email from:
+https://<webmail_URL>/WorldClient.dll?Session=<session_ID>&View=Message&Source=Yes&Number=<email_ID>&FolderId=<folder_ID>
+
+The email source is exfiltrated via an HTTP POST request to the C&C server, using the message type mail-<folder_name>-<email_ID>. An HTTP POST request is made for each exfiltrated email, creating a large amount of network traffic.
+
+The script maintains a list of exfiltrated emails, thereby avoiding the exfiltration several times.
+
+Note that the obfuscator seems to have introduced errors in the script. In the function download_all_messages_from_folder, is_folder_limit is a real variable name that was left unobfuscated. However, it is not used anywhere in the code.
+
+Two-factor authentication secret: SpyPress.MDAEMON exfiltrates the victim's two-factor authentication secret. It first fetches:
+https://<webmail_URL>/WorldClient.dll?Session=<session_ID>&View=Options-Authentication&TwoFactorAuth=Yes&GetSecret=Yes
+
+Then sends it to the C&C server using message type 2fa.
+
+To view the secret, the password is required, which SpyPress.MDAEMON gets from the fake login form it created. This secret is equivalent to the QR code mentioned in MDaemon documentation and it can be used to register the account in an authentication app, to then generate a valid 2FA code for the victim's account. Because SpyPress.MDAEMON acquires the password and the 2FA secret, attackers will be able to log into the account directly.
+
+App Password creation: In addition to stealing the 2FA secret, SpyPress.MDAEMON creates an App Password. This password can be used in an email client to send and receive messages, without having to enter the 2FA code, even if 2FA is activated for the account. Note that MDaemon webmail doesn't seem to require a 2FA code to generate a new application password.
+
+SpyPress.MDAEMON fetches https://<webmail_URL>/WorldClient.dll?Session=<session_ID>&View=Options-Authentication&CreateAppPassword=1s to create a new application password. The reply is this password, which is exfiltrated to the C&C server with message type create-app.
+
+This application password enables attackers to add the email account directly to their own email client. They can thereby keep access to the mailbox even if the main password of the victim's account is changed or if the 2FA code is changed.
+
+Network protocol: SpyPress.MDAEMON uses the same network protocol as SpyPress.HORDE.
+
+
+SpyPress.ROUNDCUBE
+
+SpyPress.ROUNDCUBE is the JavaScript payload injected into vulnerable Roundcube webmail instances. It reveals similar functionalities to SpyPress.MDAEMON:
+
+- credential stealing
+- exfiltration of the address book and the about page
+- exfiltration of emails
+- malicious Sieve rules
+
+Capabilities:
+
+Credential stealer: The credential stealer of SpyPress.ROUNDCUBE has two features. The first is almost identical to the credential stealer of SpyPress.HORDE and SpyPress.MDAEMON. The only difference is the name of the input fields, which are _user and _pass, to match the official names used in the Roundcube software.
+
+The second feature is slightly more intrusive. SpyPress.ROUNDCUBE creates an iframe with the src attribute set to https://<webmail_URL>/?_task=logout&_token=<CSRF_token>. This logs the victim out, forcing them to reenter their credentials. SpyPress.ROUNDCUBE adds a callback on the submit button of the genuine login form. The credentials are exfiltrated to the hardcoded C&C server using message type pax-fish.
+
+The CSRF token is retrieved from the variable rcmail.env.request_token. The rcmail global variable is managed and filled by the Roundcube instance, and accessible in the JavaScript context that SpyPress.ROUNDCUBE is running in.
+
+Exfiltration of the address book and the about page: SpyPress.ROUNDCUBE fetches the address book at:
+https://<webmail_URL>/?_task=addressbook&_source=0&_action=export&&_token=<CSRF_token>
+
+And the about page at:
+https://<webmail_URL>/?_task=settings&_framed=1&_action=about
+
+That page contains information about the Roundcube version and the plugins installed.
+
+Email message exfiltration: SpyPress.ROUNDCUBE starts the email exfiltration routine every 7,200 seconds (two hours). First, it gets the list of mailboxes from the global variable rcmail.env.mailboxes. Then, it iterates over all those mailboxes; for each of them, it iterates over the pages to get the email message IDs by fetching:
+https://<webmail_URL>/?_task=mail&_action=list&_mbox=<mailbox_name>&_refresh=1&_remote=1&_page=<current_page>
+
+SpyPress.ROUNDCUBE adds the HTTP header X-Roundcube-Request, which contains the CSRF token.
+
+There is a lower bound time hardcoded in the script: 6:02:03 am, October 1st, 2024 in the specific script sample analyzed, and only emails more recent than this are exfiltrated.
+
+The source of each email message is fetched from:
+https://<webmail_URL>/?_task=mail&_mbox=<mailbox>&_uid=<email_ID>&_action=viewsource
+
+If SpyPress.ROUNDCUBE has exfiltrated more than 150 emails in a row, it stops the exfiltration until the next execution of the email exfiltration routine (two hours later). This is probably done to limit the noise on the victim's network and avoid detection.
+
+Malicious Sieve rules: In some SpyPress.ROUNDCUBE samples, there is additional functionality related to Sieve rules. SpyPress.ROUNDCUBE creates a rule that sends a copy of every incoming email message to an attacker-controlled email address (srezoska@skiff[.]com in this case). Skiff was a privacy-oriented email service that provided end-to-end encryption.
+
+Network protocol: SpyPress.ROUNDCUBE uses the same network protocol as SpyPress.HORDE.
+
+
+SpyPress.ZIMBRA
+
+SpyPress.ZIMBRA is the JavaScript payload injected into vulnerable Zimbra webmail instances. It reveals similar functionalities to the previous payloads:
+
+- credential stealing
+- exfiltration of contacts and settings
+- exfiltration of email messages
+
+Capabilities:
+
+Credential stealer: The credential stealer of SpyPress.ZIMBRA is almost identical to those of SpyPress.HORDE and SpyPress.MDAEMON. The only difference is the name of the input fields, which are username and password, to match the official names used in the Zimbra software.
+
+Exfiltration of contacts and settings: SpyPress.ZIMBRA fetches the victim's contact list by making a SOAP request to the Zimbra API endpoint https://<webmail_URL>/service/soap/SearchRequest. The search query is contained in a dictionary sent to the Zimbra server in the body of a POST request. SpyPress.ZIMBRA exfiltrates the raw output to the C&C server.
+
+SpyPress.ZIMBRA also exfiltrates to the C&C server the content of the global variable ZmSetting, which contains various configuration and preference values. This is similar to SpyPress.ROUNDCUBE, which exfiltrates the about page.
+
+Email exfiltration: Every 14,400 seconds (four hours), using the setInterval function, this payload starts its email exfiltration routine. SpyPress.ZIMBRA first lists the folders, then iterates over the first 80 emails in each folder via a SOAP request to https://<webmail_URL>/service/soap/SearchRequest. For each message, the script fetches the source at:
+https://<webmail_URL>/service/home/~/?auth=co&view=text&id=<email_ID>
+
+Then exfiltrates the email message source.
+
+Network protocol: SpyPress.ZIMBRA uses the same network protocol as SpyPress.HORDE.
+
+
+CONCLUSION
+
+Over the past two years, webmail servers such as Roundcube and Zimbra have been a major target for several espionage groups such as Sednit, GreenCube, and Winter Vivern. Because many organizations don't keep their webmail servers up to date and because the vulnerabilities can be triggered remotely by sending an email message, it is very convenient for attackers to target such servers for email theft.
+
+For any inquiries about our research published on WeLiveSecurity, please contact us at threatintel@eset.com.
+
+ESET Research offers private APT intelligence reports and data feeds.
+
+
+INDICATORS OF COMPROMISE (IoCs)
+
+A comprehensive list of indicators of compromise (IoCs) and samples can be found in our GitHub repository.
+
+
+Files:
+
+SHA-1: 41FE2EFB38E0C7DD10E6009A68BD26687D6DBF4C | Detection: JS/Agent.RSO | Description: SpyPress.ZIMBRA
+SHA-1: 60D592765B0F4E08078D42B2F3DE4F5767F88773 | Detection: JS/Exploit.Agent.NSH | Description: XSS exploit for CVE-2023-43770
+SHA-1: 1078C587FE2B246D618AF74D157F941078477579 | Detection: JS/Exploit.Agent.NSH | Description: SpyPress.ROUNDCUBE
+SHA-1: 8EBBBC9EB54E216EFFB437A28B9F2C7C9DA3A0FA | Detection: HTML/Phishing.Agent.GNZ | Description: XSS exploit for CVE-2024-11182
+SHA-1: F95F26F1C097D4CA38304ECC692DBAC7424A5E8D | Detection: HTML/Phishing.Agent.GNZ | Description: SpyPress.MDAEMON
+SHA-1: 2664593E2F5DCFDA9AAA1A2DF7C4CE7EEB1EDBB6 | Detection: JS/Agent.SJU | Description: Probable XSS exploit for Horde
+SHA-1: B6C340549700470C651031865C2772D3A4C81310 | Detection: JS/Agent.SJU | Description: SpyPress.HORDE
+SHA-1: 65A8D221B9ECED76B9C17A3E1992DF9B085CECD7 | Detection: HTML/Phishing.Gen | Description: SpyPress.ROUNDCUBE
+SHA-1: 6EF845938F064DE39F4BF6450119A0CDBB61378C | Detection: N/A | Description: Email exploiting CVE-2023-43770, found on VirusTotal
+SHA-1: 8E6C07F38EF920B5154FD081BA252B9295E8184D | Detection: JS/Agent.RSP | Description: SpyPress.ROUNDCUBE
+SHA-1: AD3C590D1C0963D62702445E8108DB025EEBEC70 | Detection: JS/Agent.RSN | Description: SpyPress.ZIMBRA
+SHA-1: EBF794E421BE60C9532091EB432C1977517D1BE5 | Detection: JS/Agent.RTD | Description: SpyPress.ROUNDCUBE
+SHA-1: F81DE9584F0BF3E55C6CF1B465F00B2671DAA230 | Detection: JS/Agent.RWO | Description: SpyPress.ROUNDCUBE
+SHA-1: A5948E1E45D50A8DB063D7DFA5B6F6E249F61652 | Detection: JS/Exploit.Agent.NSG | Description: XSS exploit for CVE-2023-43770
+
+
+Network:
+
+IP: 185.225.69[.]223 | Domain: sqj[.]fr | Hosting provider: 23VNet Kft. | First seen: 2024-06-01 | Details: SpyPress C&C server
+IP: 193.29.104[.]152 | Domain: tgh24[.]xyz, tuo[.]world | Hosting provider: GLOBALAXS NOC PARIS | First seen: 2024-06-04 | Details: SpyPress C&C server
+IP: 45.137.222[.]24 | Domain: lsjb[.]digital | Hosting provider: Belcloud Administration | First seen: 2024-07-03 | Details: SpyPress C&C server
+IP: 91.237.124[.]164 | Domain: jiaw[.]shop | Hosting provider: HOSTGNOME LTD | First seen: 2023-09-28 | Details: SpyPress C&C server
+IP: 185.195.237[.]106 | Domain: hfuu[.]de | Hosting provider: Network engineer | First seen: 2024-06-03 | Details: SpyPress C&C server
+IP: 91.237.124[.]153 | Domain: raxia[.]top | Hosting provider: Damien Cutler | First seen: 2024-06-03 | Details: SpyPress C&C server
+IP: 146.70.125[.]79 | Domain: rnl[.]world | Hosting provider: GLOBALAXS NOC PARIS | First seen: 2024-06-07 | Details: SpyPress C&C server
+IP: 89.44.9[.]74 | Domain: hijx[.]xyz | Hosting provider: M247 Europe SRL | First seen: 2024-07-05 | Details: SpyPress C&C server
+IP: 111.90.151[.]167 | Domain: ikses[.]net | Hosting provider: Shinjiru Technology Sdn Bhd | First seen: 2024-12-01 | Details: SpyPress C&C server
+
+
+Additional network indicators (from 2023 Sednit attribution):
+
+IP: 45.138.87[.]250 | Domain: ceriossl[.]info
+IP: 77.243.181[.]238 | Domain: global-world-news[.]net
+
+Attacker-controlled email address used in Sieve rule exfiltration: srezoska@skiff[.]com
+
+Sender email addresses used in spearphishing:
+katecohen1984@portugalmail[.]pt (2023, exploiting CVE-2023-43770 in Roundcube)
+kyivinfo24@ukr[.]net (2024-09-11, targeting Ukrainian victim)
+office@terembg[.]com (2024-11-08, targeting Bulgarian victim)
+
+
+MITRE ATT&CK TECHNIQUES
+
+(MITRE ATT&CK framework version 17)
+
+Tactic: Resource Development | ID: T1583.001 | Name: Acquire Infrastructure: Domains | Description: Sednit bought domains at various registrars
+
+Tactic: Resource Development | ID: T1583.004 | Name: Acquire Infrastructure: Server | Description: Sednit rented servers at M247 and other hosting providers
+
+Tactic: Resource Development | ID: T1587.004 | Name: Develop Capabilities: Exploits | Description: Sednit developed (or acquired) XSS exploits for Roundcube, Zimbra, Horde, and MDaemon
+
+Tactic: Resource Development | ID: T1587.001 | Name: Develop Capabilities: Malware | Description: Sednit developed JavaScript stealers (SpyPress.HORDE, SpyPress.MDAEMON, SpyPress.ROUNDCUBE, and SpyPress.ZIMBRA) to steal data from webmail servers
+
+Tactic: Initial Access | ID: T1190 | Name: Exploit Public-Facing Application | Description: Sednit exploited known and zero-day vulnerabilities in webmail software to execute JavaScript code in the context of the victim's webmail window
+
+Tactic: Execution | ID: T1203 | Name: Exploitation for Client Execution | Description: SpyPress payloads are executed when a victim opens the malicious email in a vulnerable webmail client page
+
+Tactic: Defense Evasion | ID: T1027 | Name: Obfuscated Files or Information | Description: SpyPress payloads are obfuscated with an unknown JavaScript obfuscator
+
+Tactic: Credential Access | ID: T1187 | Name: Forced Authentication | Description: SpyPress payloads can log out users to entice them into entering their credentials in a fake login form
+
+Tactic: Credential Access | ID: T1556.006 | Name: Modify Authentication Process: Multi-Factor Authentication | Description: SpyPress.MDAEMON can steal the 2FA token and create an application password
+
+Tactic: Discovery | ID: T1087.003 | Name: Account Discovery: Email Account | Description: SpyPress payloads get information about the email account, such as the contact list
+
+Tactic: Collection | ID: T1056.003 | Name: Input Capture: Web Portal Capture | Description: SpyPress payloads try to steal webmail credentials by creating a hidden login form, to trick the browser and password managers into filling the credentials
+
+Tactic: Collection | ID: T1119 | Name: Automated Collection | Description: SpyPress payloads automatically collect credentials and email messages
+
+Tactic: Collection | ID: T1114.002 | Name: Email Collection: Remote Email Collection | Description: SpyPress payloads collect and exfiltrate emails, from the victim's mailbox
+
+Tactic: Collection | ID: T1114.003 | Name: Email Collection: Email Forwarding Rule | Description: SpyPress.MDAEMON adds a Sieve rule to forward any incoming email to an attacker-controlled email address
+
+Tactic: Command and Control | ID: T1071.001 | Name: Application Layer Protocol: Web Protocols | Description: C&C communication is done via HTTPS
+
+Tactic: Command and Control | ID: T1071.003 | Name: Application Layer Protocol: Mail Protocols | Description: In case of email forwarding rules, the exfiltration is done via email
+
+Tactic: Command and Control | ID: T1132.001 | Name: Data Encoding: Standard Encoding | Description: Data is base64 encoded before being sent to the C&C server
+
+Tactic: Exfiltration | ID: T1020 | Name: Automated Exfiltration | Description: SpyPress payloads automatically exfiltrate credentials and email messages to the C&C server
+
+Tactic: Exfiltration | ID: T1041 | Name: Exfiltration Over C2 Channel | Description: SpyPress payloads exfiltrate data over the C&C channel

@@ -8,6 +8,7 @@ opencti/.env
 
 .idea/
 .DS_Store
+**/.DS_Store
 __pycache__/
 *.pyc
 
@@ -17,5 +18,23 @@ chroma_db/
 *.bin
 finetuning/diploma_filter_adapter/
 
-*.md
-!README.md
+# Внутренние документы (не для репозитория)
+PLAN.md
+MEETING_NOTES.md
+GOOGLE_FORM_INSTRUCTIONS.md
+RESEARCH_PROMPT.md
+
+# Временные STIX бандлы (результаты тестовых прогонов)
+stix_bundle_*.json
+
+# Claude Code / AI assistant artifacts
+.claude/
+CLAUDE.md
+
+# SQLite WAL/SHM (runtime, не нужны в репо)
+*.db-wal
+*.db-shm
+
+# venv / pytest cache
+.pytest_cache/
+venv/

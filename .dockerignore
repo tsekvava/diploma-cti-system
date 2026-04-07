@@ -1,0 +1,16 @@
+venv/
+env/
+.env
+.env.*
+.git/
+.idea/
+__pycache__/
+*.pyc
+*.gguf
+*.bin
+chroma_db/
+finetuning/diploma_filter_adapter/
+.DS_Store
+PLAN.md
+MEETING_NOTES.md
+RESEARCH_PROMPT.md

@@ -35,7 +35,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).parent
 
 
-def _build_ollama_url(host: str, port: int | None) -> str:
+def _build_ollama_url(host: str, port: "int | None") -> str:
     """Собирает URL Ollama из host/port."""
     raw = host.strip()
     if "://" not in raw:
@@ -51,7 +51,7 @@ def _build_ollama_url(host: str, port: int | None) -> str:
     return f"{scheme}://{hostname}:{final_port}"
 
 
-def _configure_ollama(args) -> str | None:
+def _configure_ollama(args) -> "str | None":
     """Настраивает endpoint Ollama через OLLAMA_HOST."""
     host = getattr(args, "ollama_host", None) or os.getenv("CTI_OLLAMA_HOST")
     port = getattr(args, "ollama_port", None)
@@ -141,11 +141,28 @@ def cmd_analyze(args):
             print(f"   - {w}")
         print()
 
+    # RAG: поиск похожих отчётов
+    rag_context = ""
+    if getattr(args, "rag", False):
+        try:
+            from rag_engine import RAGSystem
+            rag = RAGSystem()
+            if rag.count > 0:
+                rag_context = rag.build_context(text)
+                if rag_context:
+                    print(f"RAG: найден контекст из {rag.count} отчётов в базе")
+                else:
+                    print(f"RAG: база содержит {rag.count} отчётов, но релевантных не найдено")
+            else:
+                print("RAG: база пуста. Используйте 'rag-index' для индексации отчётов.")
+        except ImportError as e:
+            print(f"RAG: не удалось загрузить (установите chromadb, sentence-transformers): {e}")
+
     # Инициализация
     summarizer = ReportSummarizer(model_name=args.model)
 
     # Запуск пайплайна
-    result = summarizer.process(text, source=source, input_metadata=input_metadata)
+    result = summarizer.process(text, source=source, input_metadata=input_metadata, rag_context=rag_context)
 
     # Вывод
     if args.json_output:
@@ -161,11 +178,245 @@ def cmd_analyze(args):
             json.dump(result["json"], f, indent=2, ensure_ascii=False)
         print(f"\nJSON сохранён: {args.output}")
 
+    # RAG: индексируем проанализированный отчёт
+    if getattr(args, "rag", False) and rag_context is not None:
+        try:
+            from rag_engine import RAGSystem
+            rag = RAGSystem()
+            rag.index_report(text, result, source=source)
+            print(f"RAG: отчёт '{source}' проиндексирован (всего в базе: {rag.count})")
+        except Exception:
+            pass
+
     # Автоматический STIX Bundle экспорт
     if args.export:
         from opencti_exporter import OpenCTIExporter
         exporter = OpenCTIExporter(tlp=args.tlp, dry_run=True)
         exporter.export_stix_bundle(result["json"], output_path=args.export)
+
+    return 0
+
+
+def cmd_rag_index(args):
+    """Индексация отчётов в RAG-базу (ChromaDB)."""
+    from rag_engine import RAGSystem
+
+    rag = RAGSystem()
+    print(f"RAG база: {rag.count} документов")
+    print(f"Индексация из: {args.dir} (паттерн: {args.pattern})")
+
+    count = rag.index_directory(args.dir, args.pattern)
+    print(f"Добавлено: {count} отчётов")
+    print(f"Всего в базе: {rag.count}")
+    return 0
+
+
+def cmd_nvd(args):
+    """Управление локальной базой NVD CVE."""
+    from knowledge_base.nvd_db import NVDDatabase
+
+    db = NVDDatabase()
+
+    if args.stats:
+        print(f"NVD база: {db.count} CVE записей")
+        if db.count > 0:
+            row = db.conn.execute(
+                "SELECT AVG(cvss3_score), MAX(cvss3_score) FROM cve WHERE cvss3_score IS NOT NULL"
+            ).fetchone()
+            if row[0]:
+                print(f"  Средний CVSS: {row[0]:.1f}")
+                print(f"  Макс CVSS:    {row[1]}")
+
+    elif args.fetch:
+        print(f"Загрузка {len(args.fetch)} CVE из NVD API...")
+        count = db.fetch_batch(args.fetch)
+        print(f"Загружено: {count} новых CVE")
+        print(f"Всего в базе: {db.count}")
+
+    elif args.update:
+        print(f"Загрузка CVE за последние {args.days} дней из NVD API...")
+        count = db.fetch_recent(days=args.days)
+        print(f"Загружено: {count} CVE")
+        print(f"Всего в базе: {db.count}")
+
+    elif args.lookup:
+        result = db.lookup(args.lookup)
+        if result:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(f"{args.lookup} не найден в локальной базе")
+            print(f"Используйте: python3 cli.py nvd --fetch {args.lookup}")
+
+    db.close()
+    return 0
+
+
+def cmd_analyze_batch(args):
+    """Пакетный анализ отчётов из директории."""
+    _configure_ollama(args)
+    from summarizer.report_summarizer import ReportSummarizer
+    from summarizer.input_loader import load_report_file, InputLoadError
+
+    dir_path = Path(args.dir)
+    if not dir_path.is_dir():
+        print(f"Директория не найдена: {args.dir}")
+        return 1
+
+    # Сбор файлов
+    extensions = ("*.txt", "*.md", "*.html", "*.pdf", "*.docx", "*.log")
+    files = []
+    for ext in extensions:
+        files.extend(sorted(dir_path.glob(ext)))
+    files = sorted(set(files), key=lambda f: f.name)
+
+    if not files:
+        print(f"Нет файлов для анализа в {args.dir}")
+        return 1
+
+    print(f"\n{'=' * 60}")
+    print(f"CTI PIPELINE — Пакетный анализ")
+    print(f"Директория: {dir_path}")
+    print(f"Файлов:     {len(files)}")
+    print(f"Модель:     {args.model}")
+    print(f"{'=' * 60}\n")
+
+    summarizer = ReportSummarizer(model_name=args.model)
+
+    # RAG
+    rag = None
+    if getattr(args, "rag", False):
+        try:
+            from rag_engine import RAGSystem
+            rag = RAGSystem()
+            print(f"RAG: база содержит {rag.count} отчётов\n")
+        except ImportError:
+            print("RAG: chromadb/sentence-transformers не установлены\n")
+
+    results = []
+    total_iocs = {"ipv4": set(), "domain": set(), "hash": set(), "email": set()}
+    all_actors = set()
+    all_malware = set()
+    all_techniques = set()
+    errors = []
+
+    for idx, fpath in enumerate(files, 1):
+        print(f"[{idx}/{len(files)}] {fpath.name}...", end=" ", flush=True)
+        try:
+            loaded = load_report_file(str(fpath))
+            text = loaded.text
+        except InputLoadError as e:
+            print(f"SKIP ({e})")
+            errors.append({"file": fpath.name, "error": str(e)})
+            continue
+
+        if len(text.strip()) < 100:
+            print("SKIP (слишком короткий)")
+            continue
+
+        input_metadata = {
+            "input_format": loaded.input_format,
+            "pages": loaded.pages,
+            "ocr_used": loaded.ocr_used,
+            "parse_warnings": loaded.parse_warnings,
+        }
+
+        # RAG context
+        rag_context = ""
+        if rag and rag.count > 0:
+            rag_context = rag.build_context(text)
+
+        try:
+            t0 = time.time()
+            result = summarizer.process(
+                text, source=fpath.name,
+                input_metadata=input_metadata,
+                rag_context=rag_context,
+            )
+            elapsed = time.time() - t0
+            print(f"OK ({elapsed:.1f}с)")
+        except Exception as e:
+            print(f"ERROR ({e})")
+            errors.append({"file": fpath.name, "error": str(e)})
+            continue
+
+        # Сохранение индивидуального JSON
+        out_dir = Path(args.output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"{fpath.stem}_analysis.json"
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(result["json"], f, indent=2, ensure_ascii=False)
+
+        # RAG: индексация
+        if rag:
+            try:
+                rag.index_report(text, result, source=fpath.name)
+            except Exception:
+                pass
+
+        # Агрегация статистики
+        data = result["json"]
+        for ioc_type in total_iocs:
+            items = data.get("indicators", {}).get(ioc_type, [])
+            total_iocs[ioc_type].update(items)
+
+        for a in data.get("threat_actors", []):
+            all_actors.add(a.get("name", "?"))
+        for m in data.get("malware", []):
+            all_malware.add(m.get("name", "?"))
+        for phase in data.get("kill_chain", []):
+            for t in phase.get("techniques", []):
+                all_techniques.add(f"{t.get('id', '?')} {t.get('name_en', '')}")
+
+        results.append({
+            "file": fpath.name,
+            "actors": [a.get("name", "?") for a in data.get("threat_actors", [])],
+            "malware": [m.get("name", "?") for m in data.get("malware", [])],
+            "ioc_count": sum(len(data.get("indicators", {}).get(t, [])) for t in total_iocs),
+            "techniques_count": sum(len(p.get("techniques", [])) for p in data.get("kill_chain", [])),
+            "confidence": data.get("overall_confidence", 0),
+            "time_sec": elapsed,
+        })
+
+    # ── Сводный отчёт ──
+    print(f"\n{'=' * 60}")
+    print("СВОДНЫЙ ОТЧЁТ")
+    print(f"{'=' * 60}")
+    print(f"Обработано:    {len(results)} из {len(files)} файлов")
+    if errors:
+        print(f"Ошибки:        {len(errors)}")
+    print(f"Всего IoC:     {sum(len(v) for v in total_iocs.values())} уникальных")
+    for ioc_type, items in total_iocs.items():
+        if items:
+            print(f"  {ioc_type}: {len(items)}")
+    if all_actors:
+        print(f"Акторы ({len(all_actors)}):  {', '.join(sorted(all_actors))}")
+    if all_malware:
+        print(f"Malware ({len(all_malware)}): {', '.join(sorted(all_malware))}")
+    print(f"Техники:       {len(all_techniques)} уникальных")
+
+    # Средние метрики
+    if results:
+        avg_time = sum(r["time_sec"] for r in results) / len(results)
+        avg_conf = sum(r["confidence"] for r in results) / len(results)
+        print(f"Ср. время:     {avg_time:.1f}с")
+        print(f"Ср. confidence: {avg_conf:.0f}%")
+
+    # Сохранение сводки
+    summary = {
+        "total_files": len(files),
+        "processed": len(results),
+        "errors": errors,
+        "unique_iocs": {k: len(v) for k, v in total_iocs.items()},
+        "unique_actors": sorted(all_actors),
+        "unique_malware": sorted(all_malware),
+        "unique_techniques": sorted(all_techniques),
+        "per_file": results,
+    }
+    summary_path = Path(args.output_dir) / "batch_summary.json"
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2, ensure_ascii=False)
+    print(f"\nРезультаты: {args.output_dir}/")
+    print(f"Сводка:     {summary_path}")
 
     return 0
 
@@ -505,6 +756,22 @@ def main():
                            help="OCR режим для PDF/изображений и встроенных картинок в html/docx (default: auto)")
     p_analyze.add_argument("--ocr-lang", default="rus+eng",
                            help="Языки OCR для tesseract (default: rus+eng)")
+    p_analyze.add_argument("--rag", action="store_true",
+                           help="Использовать RAG (поиск похожих отчётов из ChromaDB)")
+
+    # ── analyze-batch ──
+    p_batch = subparsers.add_parser("analyze-batch", help="Пакетный анализ отчётов из директории")
+    p_batch.add_argument("-d", "--dir", required=True, help="Директория с отчётами")
+    p_batch.add_argument("--model", default="gemma2:9b", help="Ollama модель (default: gemma2:9b)")
+    p_batch.add_argument("--ollama-host", help="Хост Ollama")
+    p_batch.add_argument("--ollama-port", type=int, help="Порт Ollama (default: 11434)")
+    p_batch.add_argument("-o", "--output-dir", default="batch_results", help="Директория для результатов")
+    p_batch.add_argument("--rag", action="store_true", help="Использовать RAG")
+
+    # ── rag-index ──
+    p_rag = subparsers.add_parser("rag-index", help="Индексировать отчёты в RAG-базу (ChromaDB)")
+    p_rag.add_argument("-d", "--dir", required=True, help="Директория с текстовыми отчётами")
+    p_rag.add_argument("--pattern", default="*.txt", help="Glob-паттерн файлов (default: *.txt)")
 
     # ── enrich ──
     p_enrich = subparsers.add_parser("enrich", help="Обогащение запроса из MITRE ATT&CK")
@@ -554,6 +821,15 @@ def main():
                             help="Добавить/обновить записи (по умолчанию)")
     p_sync.add_argument("--source", default="opencti", help="Имя источника (default: opencti)")
 
+    # ── nvd ──
+    p_nvd = subparsers.add_parser("nvd", help="Управление локальной базой NVD CVE")
+    nvd_group = p_nvd.add_mutually_exclusive_group(required=True)
+    nvd_group.add_argument("--fetch", nargs="+", metavar="CVE", help="Загрузить конкретные CVE")
+    nvd_group.add_argument("--update", action="store_true", help="Загрузить последние CVE (30 дней)")
+    nvd_group.add_argument("--lookup", metavar="CVE", help="Поиск CVE в локальной базе")
+    nvd_group.add_argument("--stats", action="store_true", help="Статистика базы")
+    p_nvd.add_argument("--days", type=int, default=30, help="Количество дней для --update")
+
     # ── survey ──
     p_survey = subparsers.add_parser("survey", help="Анализ ответов опроса SOC-аналитиков")
     p_survey.add_argument("-i", "--input", help="JSON-файл с ответами опроса")
@@ -574,6 +850,9 @@ def main():
         "benchmark": cmd_benchmark,
         "mitre-db": cmd_mitre_db,
         "intel-sync": cmd_intel_sync,
+        "rag-index": cmd_rag_index,
+        "analyze-batch": cmd_analyze_batch,
+        "nvd": cmd_nvd,
         "survey": cmd_survey,
     }
 

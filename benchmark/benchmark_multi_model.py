@@ -54,6 +54,13 @@ TASKS = [
     {"text": "data/gold_salem.txt", "truth": "data/ground_truth_gold_salem.json"},
     {"text": "data/frost_beacon.txt", "truth": "data/ground_truth_frost_beacon.json"},
     {"text": "data/cve.txt", "truth": "data/ground_truth_cve.json"},
+    {"text": "data/roundpress.txt", "truth": "data/ground_truth_roundpress.json"},
+    {"text": "data/apt42.txt", "truth": "data/ground_truth_apt42.json"},
+    {"text": "data/cisa_log4shell.txt", "truth": "data/ground_truth_cisa_log4shell.json"},
+    {"text": "data/cloud_atlas.txt", "truth": "data/ground_truth_cloud_atlas.json"},
+    {"text": "data/akira.txt", "truth": "data/ground_truth_akira.json"},
+    {"text": "data/talos_japan.txt", "truth": "data/ground_truth_talos_japan.json"},
+    # {"text": "data/uac0173.txt", "truth": "data/ground_truth_uac0173.json"},  # CERT-UA — недоступен
 ]
 
 
@@ -311,6 +318,9 @@ def main():
 
         for task in TASKS:
             dataset_name = Path(task["text"]).stem
+            if not Path(task["text"]).exists():
+                print(f"\n  Dataset: {dataset_name} — SKIP (файл не найден)")
+                continue
             print(f"\n  Dataset: {dataset_name}")
 
             with open(task["text"], "r", encoding="utf-8") as f:
@@ -388,6 +398,9 @@ def main():
 
             for task in TASKS:
                 dataset_name = Path(task["text"]).stem
+                if not Path(task["text"]).exists():
+                    print(f"\n  Dataset: {dataset_name} — SKIP (файл не найден)")
+                    continue
                 print(f"\n  Dataset: {dataset_name}")
 
                 with open(task["text"], "r", encoding="utf-8") as f:

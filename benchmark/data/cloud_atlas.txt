@@ -1,0 +1,144 @@
+Cloud Atlas APT: New VBCloud Backdoor Campaign Analysis
+
+Source: https://securelist.com/cloud-atlas-attacks-with-new-backdoor-vbcloud/115103/
+
+
+Overview
+
+Kaspersky researchers have documented Cloud Atlas, an Eastern European and Central Asian-focused APT group active since 2014, deploying a previously undocumented toolkit throughout 2024. The group leverages phishing emails containing malicious documents that exploit CVE-2018-0802 in the Microsoft Office formula editor to initiate multi-stage infections.
+
+
+Attack Chain
+
+The infection sequence follows this pattern:
+
+1. Initial Compromise: Phishing emails deliver documents exploiting the formula editor vulnerability
+2. Template Download: Victims' systems fetch a malicious RTF file from attacker-controlled servers
+3. HTA Execution: The RTF triggers download and execution of HTML Application files
+4. Backdoor Installation: HTA extracts VBShower components using NTFS Alternate Data Streams
+5. Secondary Payload: VBShower deploys PowerShower and the newly identified VBCloud backdoors
+
+Downloads are restricted to specific time windows and victim IP addresses to avoid detection.
+
+
+VBShower Backdoor Components
+
+VBShower operates through four distinct modules:
+
+Launcher: Decrypts and executes the encrypted backdoor payload stored in alternate data streams, leveraging multi-layer encryption for obfuscation.
+
+Cleaner: Erases temporary files from Internet Explorer cache to eliminate forensic evidence of downloaded malicious documents.
+
+Backdoor: Core persistence mechanism that downloads encrypted VBScript payloads from command servers and executes these within memory or alternate data streams.
+
+Payloads: Downloaded scripts perform reconnaissance (system enumeration, running processes, registry analysis) and facilitate deployment of secondary backdoors.
+
+
+PowerShower Module
+
+PowerShower downloads and executes PowerShell scripts for network reconnaissance and lateral movement. Notable capabilities include:
+
+- ADSI-based enumeration of local groups and domain membership
+- Dictionary attacks against user accounts
+- Kerberoasting attacks using PowerSploit framework components
+- Active Directory reconnaissance (administrators, domain controllers)
+- Network credential harvesting via Inveigh tool
+
+Output is saved to temporary files and exfiltrated to command servers.
+
+
+VBCloud: The New Threat
+
+VBCloud represents significant capability advancement, using public cloud storage (WebDAV) as command infrastructure rather than traditional domains. Key characteristics:
+
+Persistence: Scheduled tasks trigger execution on user login; some variants implement 30-minute polling loops.
+
+Cloud Operations: Creates specially-named files on WebDAV servers confirming active infections. Server health checks precede operational tasks.
+
+File Harvesting: Scans local drives for documents matching specific extensions (DOC, DOCX, XLS, XLSX, PDF, TXT, RTF, RAR). Files modified within 72 hours and sized between 1KB-3MB are collected into encrypted ZIP archives uploaded to cloud storage with audio file extensions to evade detection.
+
+Telegram Exfiltration: Specifically targets encryption keys from Telegram Desktop installations, compromising secure messaging accounts.
+
+System Profiling: Collects OS version, RAM specifications, manufacturer details, and network adapter MAC addresses.
+
+
+Infrastructure
+
+Malware Domains:
+- yandesks[.]net
+- yandisk[.]info
+- mirconnect[.]info
+- sber-cloud[.]info
+- gosportal[.]net
+- riamir[.]net
+- web-wathapp[.]com
+
+Cloud Repositories (WebDAV):
+- webdav.opendrive.com
+- webdav.mydrive.ch
+- webdav.yandex.ru
+- kim.nl.tab.digital
+
+HTA Download Sources:
+- content-protect[.]net
+- control-issue[.]net
+- office-confirm[.]com
+- onesoftware[.]info
+- serverop-parametrs[.]com
+- web-privacy[.]net
+- net-plugin[.]org
+- triger-working[.]com
+
+
+Geographic Targeting
+
+Approximately 82% of 2024 victims were located in Russia. Smaller attack clusters appeared in Belarus, Canada, Moldova, Israel, Kyrgyzstan, Vietnam, and Turkey.
+
+
+Detection and Mitigation
+
+Organizations should monitor for suspicious script execution (VBScript/PowerShell), NTFS alternate data streams usage, scheduled task creation by suspicious processes, and WebDAV protocol communications to unfamiliar destinations. Employee security awareness training regarding phishing remains critical, as does timely patching of formula editor vulnerabilities.
+
+
+Vulnerability References
+
+CVE-2018-0802 - Microsoft Office Formula Editor Remote Code Execution Vulnerability
+
+
+Tactics, Techniques, and Procedures (MITRE ATT&CK)
+
+- Phishing: Spearphishing Attachment (T1566.001) - Initial access via malicious documents
+- Exploit Public-Facing Application / Client Application (T1203) - CVE-2018-0802 exploitation
+- Template Injection (T1221) - RTF template fetched from remote server
+- HTML Application Execution (T1218.005) - mshta.exe used to run HTA files
+- NTFS Alternate Data Streams (T1564.004) - Used to hide VBShower components
+- Scheduled Task/Job (T1053.005) - VBCloud persistence mechanism
+- Command and Scripting Interpreter: VBScript (T1059.005)
+- Command and Scripting Interpreter: PowerShell (T1059.001)
+- Data from Local System (T1005) - File harvesting of documents
+- Exfiltration Over Web Service (T1567) - Data upload to WebDAV cloud storage
+- Credentials from Password Stores / Messaging Applications (T1552) - Telegram key theft
+- Network Share Discovery / Active Directory Discovery (T1087.002) - ADSI enumeration
+- Brute Force / Password Spraying (T1110) - Dictionary attacks against user accounts
+- Kerberoasting (T1558.003) - Using PowerSploit components
+- Credential Access via Inveigh (T1557) - Network credential harvesting
+- Indicator Removal on Host (T1070) - IE cache cleanup by Cleaner module
+- Obfuscated Files or Information (T1027) - Multi-layer encryption of payloads
+
+
+Threat Actor
+
+Name: Cloud Atlas (also known as Inception)
+Active Since: 2014
+Focus: Eastern Europe, Central Asia
+Primary 2024 Target: Russia (82% of victims)
+Secondary Targets: Belarus, Canada, Moldova, Israel, Kyrgyzstan, Vietnam, Turkey
+
+
+Tools and Malware
+
+- VBShower - Multi-module VBScript-based backdoor (Launcher, Cleaner, Backdoor, Payloads)
+- PowerShower - PowerShell-based reconnaissance and lateral movement module
+- VBCloud - New backdoor using WebDAV cloud storage for C2 communication
+- PowerSploit - Open-source PowerShell framework used for Kerberoasting
+- Inveigh - Network credential capture tool used for credential harvesting
