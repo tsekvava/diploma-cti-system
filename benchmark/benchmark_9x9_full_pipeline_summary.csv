@@ -1,0 +1,4 @@
+Method,Time_sec,F1_overall,P_overall,R_overall,F1_actors,F1_malware,F1_tools,F1_ioc,F1_fuzzy_overall
+FullPipeline+gemma2:9b,589.244,0.415,0.473,0.463,0.25,0.625,0.458,0.406,0.45
+FullPipeline+qwen2.5:14b,721.722,0.395,0.442,0.433,0.216,0.664,0.435,0.406,0.452
+FullPipeline+alientelligence/cybersecuritythreatanalysisv2,471.467,0.389,0.387,0.471,0.17,0.451,0.404,0.406,0.449

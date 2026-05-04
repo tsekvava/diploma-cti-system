@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "description": "Ground Truth — manual annotation with expert verification",
+    "source": "CERT-UA#13738 — UAC-0173 targeting Ukrainian notaries"
+  },
+  "threat_actor": [
+    "UAC-0173"
+  ],
+  "malware": [
+    "DarkCrystal RAT",
+    "DCRAT",
+    "XWORM"
+  ],
+  "tools": [
+    "RDPWRAPPER",
+    "BORE",
+    "NMAP",
+    "FIDDLER",
+    "SENDEMAIL"
+  ],
+  "attack_patterns": [
+    "PowerShell (T1059.001)",
+    "Windows Command Shell (T1059.003)",
+    "Python (T1059.006)",
+    "Registry Run Keys / Startup Folder (T1547.001)",
+    "Masquerading (T1036)",
+    "Match Legitimate Name (T1036.005)",
+    "Process Hollowing (T1055.012)",
+    "Disable or Modify Tools (T1562.001)",
+    "Hidden Window (T1564.003)",
+    "Mshta (T1218.005)",
+    "Network Service Discovery (T1046)"
+  ],
+  "targeted_countries": [
+    "Ukraine"
+  ],
+  "indicators": {
+    "ipv4": [],
+    "domain": [],
+    "hash": []
+  }
+}

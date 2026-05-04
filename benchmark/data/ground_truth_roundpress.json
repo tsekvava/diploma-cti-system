@@ -1,0 +1,95 @@
+{
+  "metadata": {
+    "description": "Ground Truth — manual annotation with expert verification",
+    "source": "ESET — Operation RoundPress (APT28 webmail exploitation)"
+  },
+  "threat_actor": [
+    "Sednit",
+    "APT28",
+    "Fancy Bear",
+    "Forest Blizzard",
+    "Sofacy",
+    "GreenCube",
+    "UNC3707",
+    "Winter Vivern"
+  ],
+  "malware": [
+    "SpyPress.ROUNDCUBE",
+    "SpyPress.ZIMBRA",
+    "SpyPress.HORDE",
+    "SpyPress.MDAEMON"
+  ],
+  "tools": [],
+  "attack_patterns": [
+    "Acquire Infrastructure: Domains (T1583.001)",
+    "Acquire Infrastructure: Server (T1583.004)",
+    "Develop Capabilities: Exploits (T1587.004)",
+    "Develop Capabilities: Malware (T1587.001)",
+    "Exploit Public-Facing Application (T1190)",
+    "Exploitation for Client Execution (T1203)",
+    "Obfuscated Files or Information (T1027)",
+    "Forced Authentication (T1187)",
+    "Modify Authentication Process: MFA (T1556.006)",
+    "Account Discovery: Email Account (T1087.003)",
+    "Input Capture: Web Portal Capture (T1056.003)",
+    "Automated Collection (T1119)",
+    "Email Collection: Remote Email Collection (T1114.002)",
+    "Email Collection: Email Forwarding Rule (T1114.003)",
+    "Application Layer Protocol: Web Protocols (T1071.001)",
+    "Application Layer Protocol: Mail Protocols (T1071.003)",
+    "Data Encoding: Standard Encoding (T1132.001)",
+    "Automated Exfiltration (T1020)",
+    "Exfiltration Over C2 Channel (T1041)"
+  ],
+  "targeted_countries": [
+    "Ukraine",
+    "Bulgaria",
+    "Romania",
+    "Greece",
+    "Cameroon",
+    "Ecuador",
+    "Serbia",
+    "Cyprus"
+  ],
+  "indicators": {
+    "ipv4": [
+      "185.225.69.223",
+      "193.29.104.152",
+      "45.137.222.24",
+      "91.237.124.164",
+      "185.195.237.106",
+      "91.237.124.153",
+      "146.70.125.79",
+      "89.44.9.74",
+      "111.90.151.167"
+    ],
+    "domain": [
+      "sqj.fr",
+      "tgh24.xyz",
+      "tuo.world",
+      "lsjb.digital",
+      "jiaw.shop",
+      "hfuu.de",
+      "raxia.top",
+      "rnl.world",
+      "hijx.xyz",
+      "ikses.net"
+    ],
+    "hash": [
+      "41FE2EFB38E0C7DD10E6009A68BD26687D6DBF4C",
+      "60D592765B0F4E08078D42B2F3DE4F5767F88773",
+      "1078C587FE2B246D618AF74D157F941078477579",
+      "8EBBBC9EB54E216EFFB437A28B9F2C7C9DA3A0FA",
+      "F95F26F1C097D4CA38304ECC692DBAC7424A5E8D",
+      "2664593E2F5DCFDA9AAA1A2DF7C4CE7EEB1EDBB6",
+      "B6C340549700470C651031865C2772D3A4C81310",
+      "65A8D221B9ECED76B9C17A3E1992DF9B085CECD7",
+      "6EF845938F064DE39F4BF6450119A0CDBB61378C",
+      "8E6C07F38EF920B5154FD081BA252B9295E8184D",
+      "AD3C590D1C0963D62702445E8108DB025EEBEC70",
+      "EBF794E421BE60C9532091EB432C1977517D1BE5",
+      "F81DE9584F0BF3E55C6CF1B465F00B2671DAA230",
+      "A5948E1E45D50A8DB063D7DFA5B6F6E249F61652"
+    ]
+  }
+}

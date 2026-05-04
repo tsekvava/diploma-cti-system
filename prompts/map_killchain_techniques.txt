@@ -1,0 +1,17 @@
+### Task:
+For the tactic "{tactic_name}" ({tactic_id}), identify which specific techniques are described in the text below.
+
+### Available Techniques (select ONLY from this list):
+{techniques_reference}
+
+### Guidelines:
+- Select ONLY techniques from the list above
+- Do NOT invent or guess technique IDs
+- For each technique, provide confidence (0-100) and brief evidence from the text
+- Return ONLY valid JSON, no other text
+
+### Output Format:
+{"techniques": [{"id": "T1566.001", "confidence": 85, "evidence": "brief quote or description"}]}
+
+### Text:
+{text}

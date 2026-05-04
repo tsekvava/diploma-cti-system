@@ -1,0 +1,16 @@
+### Task:
+Analyze the following cybersecurity text and identify which MITRE ATT&CK tactics are described.
+
+### Available Tactics (select ONLY from this list):
+{tactics_reference}
+
+### Guidelines:
+- Select 1-5 most relevant tactics
+- Only select tactics that are clearly described in the text
+- Return ONLY valid JSON, no other text
+
+### Output Format:
+{"tactics": [{"tactic_id": "TA0001", "justification": "brief reason"}]}
+
+### Text to analyze:
+{text}

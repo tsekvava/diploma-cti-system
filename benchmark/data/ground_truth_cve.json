@@ -20,15 +20,15 @@
     "Git"
   ],
   "attack_patterns": [
-    "Exploitation of public-facing application via CVE-2025-55182",
-    "Deserialization of Untrusted Data (CWE-502)",
-    "Honeypot detection (whoami, arithmetic in bash)",
-    "Ingress tool transfer (wget, curl, BusyBox)",
-    "Cryptomining (Monero miner installation)",
-    "Credential theft targeting Git",
-    "Defense evasion: neutralize AppArmor and SELinux",
-    "Process discovery and termination (Competitor elimination)",
-    "Masquerading using ELF files"
+    "Exploit Public-Facing Application (T1190)",
+    "Ingress Tool Transfer (T1105)",
+    "Resource Hijacking (T1496)",
+    "Unsecured Credentials (T1552)",
+    "Impair Defenses: Disable or Modify Tools (T1562.001)",
+    "Process Discovery (T1057)",
+    "Masquerading (T1036)",
+    "Command and Scripting Interpreter: Unix Shell (T1059.004)",
+    "System Information Discovery (T1082)"
   ],
   "targeted_countries": [],
   "indicators": {

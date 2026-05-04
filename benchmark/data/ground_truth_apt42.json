@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "description": "Ground Truth — manual annotation with expert verification",
+    "source": "Mandiant — Uncharmed: Untangling Iran's APT42 Operations"
+  },
+  "threat_actor": [
+    "APT42",
+    "Charming Kitten",
+    "Mint Sandstorm",
+    "Phosphorus",
+    "TA453",
+    "Yellow Garuda",
+    "ITG18",
+    "CALANQUE"
+  ],
+  "malware": [
+    "NICECURL",
+    "TAMECAT"
+  ],
+  "tools": [
+    "7-ZIP",
+    "PowerHuntShares",
+    "curl",
+    "Wget",
+    "Thunderbird",
+    "Google Sites"
+  ],
+  "attack_patterns": [
+    "Spearphishing Attachment (T1566.001)",
+    "Spearphishing Link (T1566.002)",
+    "Valid Accounts (T1078)",
+    "Internal Spearphishing (T1534)",
+    "Email Collection (T1114)",
+    "Data from Information Repositories (T1213)",
+    "PowerShell (T1059.001)",
+    "Visual Basic (T1059.005)",
+    "Application Layer Protocol: Web Protocols (T1071.001)",
+    "Exfiltration Over Web Service (T1567)",
+    "Use Alternate Authentication Material (T1550)",
+    "Masquerading (T1036)",
+    "Archive via Utility (T1560.001)",
+    "Account Discovery (T1087)"
+  ],
+  "targeted_countries": [
+    "United States",
+    "United Kingdom",
+    "Israel",
+    "UAE",
+    "Azerbaijan",
+    "Europe",
+    "Australia"
+  ],
+  "indicators": {
+    "ipv4": [],
+    "domain": [
+      "prism-west-candy.glitch.me",
+      "worried-eastern-salto.glitch.me",
+      "accurate-sprout-porpoise.glitch.me",
+      "drive-file-share.site",
+      "tnt200.mywire.org",
+      "washinqtonpost.press",
+      "ecomonist.org",
+      "jpost.press",
+      "aspenlnstitute.org",
+      "mccainlnstitute.org",
+      "bitly.org.il",
+      "khaleejtimes.org",
+      "businesslnsider.org",
+      "foreiqnaffairs.com"
+    ],
+    "hash": [
+      "d5a05212f5931d50bb024567a2873642",
+      "347b273df245f5e1fcbef32f5b836f1d",
+      "2f6bf8586ed0a87ef3d156124de32757",
+      "13aa118181ac6a202f0a64c0c7a61ce7",
+      "c23663ebdfbc340457201dbec7469386",
+      "853687659483d215309941dae391a68f",
+      "d7bf138d1aa2b70d6204a2f3c3bc72a7",
+      "081419a484bbf99f278ce636d445b9d8",
+      "c3b9191f3a3c139ae886c0840709865e",
+      "dd2653a2543fa44eaeeff3ca82fe3513",
+      "9c5337e0b1aef2657948fd5e82bdb4c3"
+    ]
+  }
+}

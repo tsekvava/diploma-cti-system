@@ -39,17 +39,17 @@
     "RDP"
   ],
   "attack_patterns": [
-    "Exploit Public-Facing Application",
-    "Zero-day exploitation",
-    "Create Account",
-    "OS Credential Dumping",
-    "DLL Side-Loading",
-    "Bring Your Own Vulnerable Driver",
-    "Impair Defenses",
-    "Protocol Tunneling",
-    "Command and Scripting Interpreter",
-    "Ingress Tool Transfer",
-    "Data Encrypted for Impact"
+    "Exploit Public-Facing Application (T1190)",
+    "Create Account (T1136)",
+    "OS Credential Dumping (T1003)",
+    "DLL Side-Loading (T1574.002)",
+    "Impair Defenses: Disable or Modify Tools (T1562.001)",
+    "Protocol Tunneling (T1572)",
+    "Command and Scripting Interpreter (T1059)",
+    "Ingress Tool Transfer (T1105)",
+    "Data Encrypted for Impact (T1486)",
+    "Exploitation for Privilege Escalation (T1068)",
+    "Remote Services: Remote Desktop Protocol (T1021.001)"
   ],
   "targeted_countries": [
     "Europe",

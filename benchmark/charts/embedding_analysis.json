@@ -1,0 +1,39 @@
+{
+  "n_reports": 9,
+  "report_names": [
+    "akira",
+    "apt42",
+    "cisa_log4shell",
+    "cloud_atlas",
+    "cve",
+    "frost_beacon",
+    "gold_salem",
+    "roundpress",
+    "talos_japan"
+  ],
+  "embedding_dim": 384,
+  "avg_pairwise_similarity": 0.5377802848815918,
+  "pca_explained_variance": [
+    0.17875948548316956,
+    0.17259849607944489,
+    0.1536742001771927,
+    0.13528458774089813,
+    0.11874088644981384
+  ],
+  "pca_n_components_95": 8,
+  "cluster_analysis": {
+    "2": {
+      "silhouette": 0.038342252373695374,
+      "davies_bouldin": 2.088889000249092
+    },
+    "3": {
+      "silhouette": 0.06896734982728958,
+      "davies_bouldin": 1.5947525519670702
+    },
+    "4": {
+      "silhouette": 0.059890083968639374,
+      "davies_bouldin": 1.27433438353455
+    }
+  },
+  "best_k": 3
+}

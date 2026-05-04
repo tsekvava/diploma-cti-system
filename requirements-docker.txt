@@ -1,0 +1,32 @@
+# CTI Pipeline — runtime dependencies (Docker)
+# Fine-tuning (torch, trl, peft, datasets) excluded — not needed at runtime
+
+ollama>=0.4.0
+beautifulsoup4>=4.12.0
+python-docx>=1.1.2,<2.0.0
+pypdf>=5.0.0,<6.0.0
+python-magic>=0.4.27
+pytesseract>=0.3.10,<0.4.0
+pillow>=10.0.0
+rapidfuzz>=3.0.0
+
+# MITRE ATT&CK + enrichment
+pandas>=2.0.0
+
+# RAG
+chromadb>=1.0.0
+sentence-transformers>=3.0.0
+
+# STIX export
+stix2>=3.0.0
+pycti>=6.0.0
+
+# Benchmark charts
+matplotlib>=3.8.0
+seaborn>=0.13.0
+
+# Web UI
+streamlit>=1.30.0
+
+# MCP server
+mcp>=1.0.0

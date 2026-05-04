@@ -1,0 +1,54 @@
+{
+  "metadata": {
+    "description": "Ground Truth — manual annotation with expert verification",
+    "source": "CISA/FBI AA22-320A — Iranian APT Log4Shell incident response"
+  },
+  "threat_actor": [],
+  "malware": [
+    "XMRig",
+    "RuntimeBroker.exe"
+  ],
+  "tools": [
+    "Mimikatz",
+    "PsExec",
+    "Ngrok",
+    "PowerShell",
+    "mde.ps1"
+  ],
+  "attack_patterns": [
+    "Exploit Public-Facing Application (T1190)",
+    "PowerShell (T1059.001)",
+    "Scheduled Task (T1053.005)",
+    "Valid Accounts: Default Accounts (T1078.001)",
+    "Account Manipulation (T1098)",
+    "Create Account: Local (T1136.001)",
+    "Create Account: Domain (T1136.002)",
+    "File Deletion (T1070.004)",
+    "Disable or Modify Tools (T1562.001)",
+    "OS Credential Dumping: LSASS Memory (T1003.001)",
+    "Credentials from Password Stores (T1555)",
+    "Windows Credential Manager (T1555.004)",
+    "Internet Connection Discovery (T1016.001)",
+    "Remote System Discovery (T1018)",
+    "RDP (T1021.001)",
+    "Proxy (T1090)",
+    "Ingress Tool Transfer (T1105)"
+  ],
+  "targeted_countries": [
+    "United States"
+  ],
+  "indicators": {
+    "ipv4": [
+      "182.54.217.2",
+      "51.89.181.64"
+    ],
+    "domain": [
+      "us-nation-ny.cf"
+    ],
+    "hash": [
+      "0c0195c48b6b8582fa6f6373032118da",
+      "6b8d058db910487ff90fe39e1dcd93b8",
+      "910350d4f72b7b25f4fbecfc08d815cd"
+    ]
+  }
+}

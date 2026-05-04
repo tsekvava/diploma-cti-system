@@ -13,10 +13,7 @@ TASKS = [
 ]
 
 def normalize_entity(text):
-    """
-    Превращает 'Spearphishing Attachment (T1566.001)' -> 'spearphishing attachment'
-    Убирает скобки, ID техник, спецсимволы и приводит к нижнему регистру.
-    """
+    """Чистит сущность: убирает ID/скобки и приводит к нижнему регистру."""
     text = str(text).lower()
     text = re.sub(r'[\(\[]?t\d{4}(\.\d{3})?[\)\]]?', '', text)
     text = text.strip().strip('.,-:')
