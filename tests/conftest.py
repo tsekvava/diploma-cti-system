@@ -1,11 +1,4 @@
-"""
-Shared pytest fixtures for CTI Pipeline tests.
-
-Fixtures provide:
-  - Access to the real MITRE SQLite database (mitre.db)
-  - Sample text fragments for regex testing
-  - Mock LLM responses for pipeline tests without Ollama
-"""
+"""Shared pytest fixtures for CTI Pipeline tests."""
 
 import sys
 from pathlib import Path

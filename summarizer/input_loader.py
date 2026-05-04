@@ -1,13 +1,4 @@
-"""
-Input loader for CTI reports.
-
-Поддерживает:
-  - txt/md/log
-  - html/htm (+ OCR для встроенных изображений)
-  - docx (+ OCR для встроенных изображений)
-  - pdf (text extraction + OCR fallback)
-  - png/jpg/jpeg/bmp (OCR)
-"""
+"""Input loader for CTI reports."""
 
 from __future__ import annotations
 

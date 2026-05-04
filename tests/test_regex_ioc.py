@@ -1,13 +1,4 @@
-"""
-Tests for IoC regex patterns from ReportSummarizer.
-
-Tests cover:
-  - IPv4 extraction (including private IP filtering)
-  - Domain extraction (including IGNORE_DOMAINS and IGNORE_EXTENSIONS)
-  - Hash extraction (MD5, SHA1, SHA256)
-  - CVE extraction
-  - Email extraction
-"""
+"""Tests for IoC regex patterns from ReportSummarizer."""
 
 import re
 import sys
@@ -24,7 +15,6 @@ from summarizer.report_summarizer import (
 )
 
 
-# ── IPv4 ─────────────────────────────────────────────────
 
 
 class TestIPv4Regex:
@@ -64,7 +54,6 @@ class TestIPv4Regex:
         assert len(matches) == 2
 
 
-# ── Domain ───────────────────────────────────────────────
 
 
 class TestDomainRegex:
@@ -98,7 +87,6 @@ class TestDomainFiltering:
         assert "evil-update.com" not in IGNORE_DOMAINS
 
 
-# ── Hashes ───────────────────────────────────────────────
 
 
 class TestHashRegex:
@@ -133,7 +121,6 @@ class TestHashRegex:
         assert pat.search("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz") is None
 
 
-# ── CVE ──────────────────────────────────────────────────
 
 
 class TestCVERegex:
@@ -157,7 +144,6 @@ class TestCVERegex:
         assert self.pattern.search("CVE-2024") is None
 
 
-# ── Email ────────────────────────────────────────────────
 
 
 class TestEmailRegex:
@@ -173,7 +159,6 @@ class TestEmailRegex:
         assert self.pattern.search("not-an-email.com") is None
 
 
-# ── Integration: full report extraction ──────────────────
 
 
 class TestFullReportExtraction:

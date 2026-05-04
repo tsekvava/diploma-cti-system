@@ -1,13 +1,4 @@
-"""
-Tests for benchmark metric calculations.
-
-Tests cover:
-  - F1/Precision/Recall set-based computation
-  - Entity normalization for comparison
-  - MITRE ID extraction from attack patterns
-  - IoC set extraction
-  - Edge cases (empty sets, perfect match, no overlap)
-"""
+"""Tests for benchmark metric calculations."""
 
 import sys
 from pathlib import Path
@@ -26,7 +17,6 @@ from benchmark_multi_model import (
 )
 
 
-# ── calculate_f1_set ─────────────────────────────────────
 
 
 class TestCalculateF1Set:
@@ -76,7 +66,6 @@ class TestCalculateF1Set:
         assert abs(p - 0.6667) < 0.01
 
 
-# ── normalize_entity ─────────────────────────────────────
 
 
 class TestNormalizeEntity:
@@ -101,7 +90,6 @@ class TestNormalizeEntity:
         assert result == "cobalt strike"
 
 
-# ── _extract_mitre_ids ───────────────────────────────────
 
 
 class TestExtractMitreIds:
@@ -132,7 +120,6 @@ class TestExtractMitreIds:
         assert len(ids) == 0
 
 
-# ── get_entity_set ───────────────────────────────────────
 
 
 class TestGetEntitySet:
@@ -155,7 +142,6 @@ class TestGetEntitySet:
         assert len(s) == 0
 
 
-# ── get_ioc_set ──────────────────────────────────────────
 
 
 class TestGetIocSet:
@@ -182,7 +168,6 @@ class TestGetIocSet:
         assert len(s) == 0
 
 
-# ── get_attack_pattern_set ───────────────────────────────
 
 
 class TestGetAttackPatternSet:

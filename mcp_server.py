@@ -1,25 +1,4 @@
-"""
-CTI Pipeline MCP Server — единый MCP-интерфейс для системы анализа киберугроз.
-
-Предоставляет все возможности системы через MCP-протокол,
-подключаемый к любому LLM-клиенту (Claude Desktop, Open WebUI, custom agent).
-
-Tools:
-  - summarize_report   — полный 7-этапный анализ CTI-отчёта
-  - enrich_query       — обогащение запроса из MITRE ATT&CK
-  - profile_entity     — профилирование APT-группы или ПО
-  - export_stix        — экспорт результатов в STIX 2.1 Bundle
-  - search_mitre       — поиск по базе MITRE ATT&CK
-  - list_tactics       — список всех тактик Kill Chain
-  - list_groups        — список APT-групп из базы
-
-Resources:
-  - mitre://stats       — статистика базы MITRE ATT&CK
-
-Запуск:
-    python3 mcp_server.py                     # stdio (для Claude Desktop)
-    python3 mcp_server.py --transport sse     # SSE (для веб-клиентов)
-"""
+"""CTI Pipeline MCP Server — единый MCP-интерфейс для системы анализа киберугроз."""
 
 import json
 import os
@@ -116,9 +95,7 @@ def _get_db():
     return _components["db"]
 
 
-# ================================================================
 #  TOOLS
-# ================================================================
 
 
 @mcp.tool()
@@ -383,11 +360,7 @@ def search_mitre(
 
 @mcp.tool()
 def list_tactics() -> str:
-    """Список всех 14 тактик MITRE ATT&CK Kill Chain.
-
-    Возвращает полный список тактик в порядке Kill Chain
-    с русскими и английскими названиями, количеством техник.
-    """
+    """Список всех 14 тактик MITRE ATT&CK Kill Chain."""
     db = _get_db()
     cur = db.cursor()
 
@@ -473,9 +446,7 @@ def list_groups(
     }, indent=2, ensure_ascii=False)
 
 
-# ================================================================
 #  RESOURCES
-# ================================================================
 
 
 @mcp.resource("mitre://stats")
@@ -518,9 +489,7 @@ def mitre_stats() -> str:
     return json.dumps(stats, indent=2)
 
 
-# ================================================================
 #  PROMPTS
-# ================================================================
 
 
 @mcp.prompt()
@@ -560,9 +529,7 @@ def enrich_technique(technique_id: str) -> str:
     )
 
 
-# ================================================================
 #  ENTRY POINT
-# ================================================================
 
 
 def main():

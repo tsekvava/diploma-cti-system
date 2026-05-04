@@ -198,11 +198,7 @@ class NVDDatabase:
         return parsed
 
     def fetch_batch(self, cve_ids: list, delay: float = 0.7) -> int:
-        """Загружает список CVE из NVD API (с rate limiting).
-
-        NVD API без ключа: 5 запросов в 30 секунд.
-        С API key: 50 запросов в 30 секунд.
-        """
+        """Загружает список CVE из NVD API (с rate limiting)."""
         fetched = 0
         for cve_id in cve_ids:
             existing = self.lookup(cve_id)

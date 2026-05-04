@@ -29,9 +29,7 @@ CHARTS_DIR.mkdir(exist_ok=True)
 DATA_DIR = Path("data")
 
 
-# ─────────────────────────────────────────────
 #  1. Кодирование отчётов
-# ─────────────────────────────────────────────
 
 def encode_reports(report_paths: list) -> tuple:
     """Кодирует CTI-отчёты через sentence-transformers."""
@@ -54,9 +52,7 @@ def encode_reports(report_paths: list) -> tuple:
     return np.array(embeddings), names, [len(t) for t in texts]
 
 
-# ─────────────────────────────────────────────
 #  2. Cosine similarity
-# ─────────────────────────────────────────────
 
 def cosine_similarity_matrix(embeddings: np.ndarray) -> np.ndarray:
     """Матрица cosine similarity."""
@@ -65,9 +61,7 @@ def cosine_similarity_matrix(embeddings: np.ndarray) -> np.ndarray:
     return normalized @ normalized.T
 
 
-# ─────────────────────────────────────────────
 #  3. PCA
-# ─────────────────────────────────────────────
 
 def pca_analysis(embeddings: np.ndarray, names: list) -> dict:
     """PCA анализ с explained variance."""
@@ -84,9 +78,7 @@ def pca_analysis(embeddings: np.ndarray, names: list) -> dict:
     }
 
 
-# ─────────────────────────────────────────────
 #  4. t-SNE
-# ─────────────────────────────────────────────
 
 def tsne_analysis(embeddings: np.ndarray, perplexity: float = 5.0) -> np.ndarray:
     """t-SNE 2D проекция."""
@@ -98,9 +90,7 @@ def tsne_analysis(embeddings: np.ndarray, perplexity: float = 5.0) -> np.ndarray
     return tsne.fit_transform(embeddings)
 
 
-# ─────────────────────────────────────────────
 #  5. Кластерный анализ
-# ─────────────────────────────────────────────
 
 def cluster_analysis(embeddings: np.ndarray) -> dict:
     """K-means + silhouette score для k=2,3,4."""
@@ -122,9 +112,7 @@ def cluster_analysis(embeddings: np.ndarray) -> dict:
     return results, best_k
 
 
-# ─────────────────────────────────────────────
 #  6. Корреляция similarity ↔ performance
-# ─────────────────────────────────────────────
 
 def similarity_performance_correlation(sim_matrix: np.ndarray, names: list,
                                         benchmark_df: pd.DataFrame) -> dict:
@@ -166,9 +154,7 @@ def similarity_performance_correlation(sim_matrix: np.ndarray, names: list,
     }
 
 
-# ─────────────────────────────────────────────
 #  Визуализации
-# ─────────────────────────────────────────────
 
 def plot_similarity_heatmap(sim_matrix: np.ndarray, names: list,
                              output: str = "charts/cosine_similarity.png"):
@@ -299,9 +285,6 @@ def plot_sim_vs_f1(corr_result: dict, output: str = "charts/similarity_vs_f1.png
     print(f"  Сохранён: {output}")
 
 
-# ─────────────────────────────────────────────
-#  Main
-# ─────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Embedding Space Analysis")

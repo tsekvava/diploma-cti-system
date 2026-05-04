@@ -29,9 +29,7 @@ CHARTS_DIR = Path("charts")
 CHARTS_DIR.mkdir(exist_ok=True)
 
 
-# ─────────────────────────────────────────────
 #  1. Bootstrap Confidence Intervals (BCa)
-# ─────────────────────────────────────────────
 
 def bootstrap_ci(data: np.ndarray, n_boot: int = 10000, alpha: float = 0.05) -> dict:
     """BCa bootstrap 95% CI для среднего."""
@@ -84,9 +82,7 @@ def bootstrap_ci(data: np.ndarray, n_boot: int = 10000, alpha: float = 0.05) -> 
     }
 
 
-# ─────────────────────────────────────────────
 #  2. Pairwise Wilcoxon signed-rank tests
-# ─────────────────────────────────────────────
 
 def pairwise_wilcoxon(df: pd.DataFrame, models: list, metric: str = "F1_overall") -> pd.DataFrame:
     """Матрица p-values (Wilcoxon signed-rank) с коррекцией Бонферрони."""
@@ -123,9 +119,7 @@ def pairwise_wilcoxon(df: pd.DataFrame, models: list, metric: str = "F1_overall"
     return p_matrix, alpha_adj
 
 
-# ─────────────────────────────────────────────
 #  3. Friedman test + Nemenyi post-hoc
-# ─────────────────────────────────────────────
 
 def friedman_test(df: pd.DataFrame, models: list, metric: str = "F1_overall"):
     """Friedman χ² тест + средние ранги."""
@@ -169,9 +163,7 @@ def friedman_test(df: pd.DataFrame, models: list, metric: str = "F1_overall"):
     }
 
 
-# ─────────────────────────────────────────────
 #  4. Cohen's d (effect size)
-# ─────────────────────────────────────────────
 
 def cohens_d(x: np.ndarray, y: np.ndarray) -> float:
     """Cohen's d для двух выборок."""
@@ -180,9 +172,7 @@ def cohens_d(x: np.ndarray, y: np.ndarray) -> float:
     return float((np.mean(x) - np.mean(y)) / pooled_std) if pooled_std > 0 else 0.0
 
 
-# ─────────────────────────────────────────────
 #  Визуализации
-# ─────────────────────────────────────────────
 
 def plot_ci_chart(ci_data: dict, output: str = "charts/bootstrap_ci.png"):
     """Bar chart с error bars (CI)."""
@@ -303,9 +293,6 @@ def plot_critical_difference(friedman_result: dict, output: str = "charts/critic
     print(f"  Сохранён: {output}")
 
 
-# ─────────────────────────────────────────────
-#  Main
-# ─────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Statistical Analysis of CTI Benchmark")

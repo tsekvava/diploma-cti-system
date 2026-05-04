@@ -70,11 +70,7 @@ class AttackMapper:
 
     @staticmethod
     def _render_template(template: str, values: dict[str, str]) -> str:
-        """Безопасный рендер плейсхолдеров без str.format.
-
-        Важно: в шаблоне могут быть JSON-фрагменты вроде {"tactics": ...},
-        и str.format интерпретирует это как ключ.
-        """
+        """Безопасный рендер плейсхолдеров без str.format."""
         rendered = template
         for key, value in values.items():
             rendered = rendered.replace(f"{{{key}}}", str(value))

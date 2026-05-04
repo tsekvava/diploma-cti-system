@@ -30,9 +30,7 @@ CHARTS_DIR = Path("charts")
 CHARTS_DIR.mkdir(exist_ok=True)
 
 
-# ─────────────────────────────────────────────
 #  Конфигурации ablation
-# ─────────────────────────────────────────────
 
 ABLATION_CONFIGS = {
     "FULL": {"skip_normalize": False, "skip_kill_chain": False,
@@ -150,9 +148,7 @@ def analyze_ablation(df: pd.DataFrame) -> dict:
     return analysis
 
 
-# ─────────────────────────────────────────────
 #  Визуализации
-# ─────────────────────────────────────────────
 
 def plot_ablation_bar(analysis: dict, output: str = "charts/ablation_bar.png"):
     """Bar chart: marginal contribution каждого компонента."""
@@ -231,9 +227,6 @@ def plot_ablation_table(df: pd.DataFrame, output: str = "charts/ablation_table.p
     print(f"  Сохранён: {output}")
 
 
-# ─────────────────────────────────────────────
-#  Main
-# ─────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Ablation Study")

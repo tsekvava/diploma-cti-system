@@ -1,19 +1,8 @@
-"""
-Tests for EntityNormalizer — 3-level entity matching against MITRE ATT&CK.
-
-Tests cover:
-  - Exact match (case-insensitive)
-  - Alias match
-  - Fuzzy match (rapidfuzz, threshold 85%)
-  - Not-found entities
-  - Technique validation
-  - Deduplication in normalize_all()
-"""
+"""Tests for EntityNormalizer — 3-level entity matching against MITRE ATT&CK."""
 
 import pytest
 
 
-# ── APT Group normalization ──────────────────────────────
 
 
 class TestNormalizeThreatActor:
@@ -74,7 +63,6 @@ class TestNormalizeThreatActor:
         assert result["mitre_id"] == "G0032"
 
 
-# ── Software normalization ───────────────────────────────
 
 
 class TestNormalizeSoftware:
@@ -109,7 +97,6 @@ class TestNormalizeSoftware:
         assert result["type"] in ("malware", "tool")
 
 
-# ── Technique validation ─────────────────────────────────
 
 
 class TestValidateTechniqueId:
@@ -143,7 +130,6 @@ class TestValidateTechniqueId:
         assert info["name_ru"] != ""
 
 
-# ── Tactic-technique relationship ────────────────────────
 
 
 class TestGetTechniquesForTactic:
@@ -163,7 +149,6 @@ class TestGetTechniquesForTactic:
         assert techs == []
 
 
-# ── normalize_all() deduplication ────────────────────────
 
 
 class TestNormalizeAll:

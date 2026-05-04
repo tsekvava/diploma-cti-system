@@ -93,11 +93,7 @@ def calculate_f1_set(pred_set: set, truth_set: set) -> tuple:
 
 
 def calculate_f1_fuzzy(pred_set: set, truth_set: set, threshold: int = 80) -> tuple:
-    """Считает P/R/F1 с fuzzy matching (RapidFuzz token_sort_ratio).
-
-    Для каждого pred ищем лучший match в truth. Если score >= threshold → TP.
-    Каждый truth-элемент может быть сопоставлен не более одного раза (greedy).
-    """
+    """Считает P/R/F1 с fuzzy matching (RapidFuzz token_sort_ratio)."""
     if not truth_set:
         return (0.0, 0.0, 0.0)
     if not pred_set:
@@ -206,13 +202,7 @@ def get_ioc_set(data: dict) -> set:
 
 
 def _extract_mitre_ids(items: list) -> set:
-    """Извлекает MITRE ATT&CK ID из списка attack_patterns.
-
-    Обрабатывает:
-      - "T1566.001"  (чистый ID из regex)
-      - "Spearphishing Attachment (T1566.001)"  (ID в скобках)
-      - "Command & Scripting Interpreter: PowerShell (T1059.003)"
-    """
+    """Извлекает MITRE ATT&CK ID из списка attack_patterns."""
     ids = set()
     for item in items:
         found = re.findall(r"T\d{4}(?:\.\d{3})?", str(item))
@@ -221,10 +211,7 @@ def _extract_mitre_ids(items: list) -> set:
 
 
 def get_attack_pattern_set(data: dict) -> set:
-    """Извлекает множество attack_patterns двумя способами:
-    1. MITRE ID (T1566.001 → t1566.001) — для regex-extracted и ground truth
-    2. Нормализованные имена (для текстовых описаний без ID)
-    """
+    """Извлекает множество attack_patterns двумя способами:"""
     items = data.get("attack_patterns", [])
     s = set()
 
@@ -245,20 +232,7 @@ def get_attack_pattern_set(data: dict) -> set:
 
 
 def calculate_metrics_detailed(pred: dict, truth: dict) -> dict:
-    """
-    Считает метрики по категориям в трёх протоколах: strict, fuzzy, normalized.
-
-    Категории:
-      - actors: threat_actor
-      - malware: malware
-      - tools: tools
-      - attack_patterns: MITRE ID + текстовые названия
-      - ioc: indicators (IP, domain, hash)
-      - overall: все вместе
-
-    Возвращает dict с ключом "strict" (для обратной совместимости — основной).
-    Дополнительно: "fuzzy" и "normalized" протоколы.
-    """
+    """Считает метрики по категориям в трёх протоколах: strict, fuzzy, normalized."""
     categories = {
         "actors": (["threat_actor"], ["threat_actor"]),
         "malware": (["malware"], ["malware"]),

@@ -1,13 +1,4 @@
-"""
-Tests for OpenCTI Exporter — STIX 2.1 Bundle generation (dry-run mode).
-
-Tests cover:
-  - STIX Bundle structure validity
-  - Object creation (Intrusion Set, Malware, Tool, Attack Pattern, etc.)
-  - Relationship creation
-  - TLP marking definitions
-  - Export from sample analysis result
-"""
+"""Tests for OpenCTI Exporter — STIX 2.1 Bundle generation (dry-run mode)."""
 
 import json
 import sys
@@ -20,7 +11,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from opencti_exporter import OpenCTIExporter, TLP_MARKINGS
 
 
-# ── TLP Markings ─────────────────────────────────────────
 
 
 class TestTLPMarkings:
@@ -35,7 +25,6 @@ class TestTLPMarkings:
             assert len(marking_id) > 30
 
 
-# ── STIX Bundle from test fixture ────────────────────────
 
 
 @pytest.fixture
@@ -103,7 +92,6 @@ class TestExporterInit:
         assert "TLP:RED" in TLP_MARKINGS
 
 
-# ── Existing STIX Bundle fixture validation ──────────────
 
 
 class TestExistingBundleFixture:

@@ -128,9 +128,7 @@ class OpenCTIExporter:
         self.client = OpenCTIApiClient(self.url, self.token)
         print("   Подключено.\n")
 
-    # ──────────────────────────────────────────────
     #  Создание STIX-объектов
-    # ──────────────────────────────────────────────
 
     def _create_intrusion_set(self, actor: dict) -> str:
         """Создаёт Intrusion Set (APT-группу)."""
@@ -353,9 +351,7 @@ class OpenCTIExporter:
             self._stats["errors"] += 1
             return ""
 
-    # ──────────────────────────────────────────────
     #  Создание связей (Relationships)
-    # ──────────────────────────────────────────────
 
     def _create_relationship(self, from_id: str, to_id: str,
                               rel_type: str, description: str = ""):
@@ -381,9 +377,7 @@ class OpenCTIExporter:
             print(f"       [ERROR] Relationship {rel_type}: {e}")
             self._stats["errors"] += 1
 
-    # ──────────────────────────────────────────────
     #  Основной метод экспорта
-    # ──────────────────────────────────────────────
 
     def export(self, data: dict) -> dict:
         """
@@ -519,9 +513,7 @@ class OpenCTIExporter:
 
         return self._stats
 
-    # ──────────────────────────────────────────────
     #  STIX Bundle экспорт (для air-gapped среды)
-    # ──────────────────────────────────────────────
 
     def export_stix_bundle(self, data: dict, output_path: str = None) -> dict:
         """

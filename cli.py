@@ -158,7 +158,6 @@ def cmd_analyze(args):
         except ImportError as e:
             print(f"RAG: не удалось загрузить (установите chromadb, sentence-transformers): {e}")
 
-    # Инициализация
     summarizer = ReportSummarizer(model_name=args.model)
 
     # Запуск пайплайна
@@ -377,7 +376,6 @@ def cmd_analyze_batch(args):
             "time_sec": elapsed,
         })
 
-    # ── Сводный отчёт ──
     print(f"\n{'=' * 60}")
     print("СВОДНЫЙ ОТЧЁТ")
     print(f"{'=' * 60}")
@@ -737,7 +735,6 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="command", help="Доступные команды")
 
-    # ── analyze ──
     p_analyze = subparsers.add_parser("analyze", help="Полный анализ CTI-отчёта")
     input_group = p_analyze.add_mutually_exclusive_group()
     input_group.add_argument(
@@ -759,7 +756,6 @@ def main():
     p_analyze.add_argument("--rag", action="store_true",
                            help="Использовать RAG (поиск похожих отчётов из ChromaDB)")
 
-    # ── analyze-batch ──
     p_batch = subparsers.add_parser("analyze-batch", help="Пакетный анализ отчётов из директории")
     p_batch.add_argument("-d", "--dir", required=True, help="Директория с отчётами")
     p_batch.add_argument("--model", default="gemma2:9b", help="Ollama модель (default: gemma2:9b)")
@@ -768,17 +764,14 @@ def main():
     p_batch.add_argument("-o", "--output-dir", default="batch_results", help="Директория для результатов")
     p_batch.add_argument("--rag", action="store_true", help="Использовать RAG")
 
-    # ── rag-index ──
     p_rag = subparsers.add_parser("rag-index", help="Индексировать отчёты в RAG-базу (ChromaDB)")
     p_rag.add_argument("-d", "--dir", required=True, help="Директория с текстовыми отчётами")
     p_rag.add_argument("--pattern", default="*.txt", help="Glob-паттерн файлов (default: *.txt)")
 
-    # ── enrich ──
     p_enrich = subparsers.add_parser("enrich", help="Обогащение запроса из MITRE ATT&CK")
     p_enrich.add_argument("query", nargs="+", help="Запрос: T1059, G0032, 'Cobalt Strike', CVE-2024-38063")
     p_enrich.add_argument("--json", dest="json_output", action="store_true", help="Вывод в JSON формате")
 
-    # ── export ──
     p_export = subparsers.add_parser("export", help="Экспорт результатов в OpenCTI")
     p_export.add_argument("-i", "--input", required=True, help="JSON-файл результатов анализа")
     p_export.add_argument("--dry-run", action="store_true", help="Показать что будет создано без подключения")
@@ -787,7 +780,6 @@ def main():
     p_export.add_argument("--url", default=None, help="OpenCTI URL")
     p_export.add_argument("--token", default=None, help="OpenCTI API token")
 
-    # ── benchmark ──
     p_bench = subparsers.add_parser("benchmark", help="Бенчмарк LLM-моделей")
     p_bench.add_argument("--models", default="gemma2:9b,qwen2.5:14b",
                          help="Модели через запятую (default: gemma2:9b,qwen2.5:14b)")
@@ -797,7 +789,6 @@ def main():
                          help="Пропустить baseline-модели")
     p_bench.add_argument("-o", "--output", default="benchmark_results.csv", help="Файл результатов")
 
-    # ── profile ──
     p_profile = subparsers.add_parser("profile", help="Профилирование APT-группы или ПО")
     p_profile.add_argument("query", nargs="+", help="Запрос: G0032, 'APT28', S0154, 'Cobalt Strike'")
     p_profile.add_argument("--type", choices=["auto", "group", "software"], default="auto",
@@ -808,10 +799,8 @@ def main():
     p_profile.add_argument("--json", dest="json_output", action="store_true", help="Вывод в JSON формате")
     p_profile.add_argument("-o", "--output", help="Сохранить результат в файл")
 
-    # ── mitre-db ──
     p_mitre = subparsers.add_parser("mitre-db", help="Пересоздать базу MITRE ATT&CK SQLite")
 
-    # ── intel-sync ──
     p_sync = subparsers.add_parser("intel-sync", help="Импорт internal intel из STIX JSON (OpenCTI)")
     p_sync.add_argument("--stix", required=True, help="Путь к STIX JSON/BUNDLE файлу")
     mode_group = p_sync.add_mutually_exclusive_group()
@@ -821,7 +810,6 @@ def main():
                             help="Добавить/обновить записи (по умолчанию)")
     p_sync.add_argument("--source", default="opencti", help="Имя источника (default: opencti)")
 
-    # ── nvd ──
     p_nvd = subparsers.add_parser("nvd", help="Управление локальной базой NVD CVE")
     nvd_group = p_nvd.add_mutually_exclusive_group(required=True)
     nvd_group.add_argument("--fetch", nargs="+", metavar="CVE", help="Загрузить конкретные CVE")
@@ -830,7 +818,6 @@ def main():
     nvd_group.add_argument("--stats", action="store_true", help="Статистика базы")
     p_nvd.add_argument("--days", type=int, default=30, help="Количество дней для --update")
 
-    # ── survey ──
     p_survey = subparsers.add_parser("survey", help="Анализ ответов опроса SOC-аналитиков")
     p_survey.add_argument("-i", "--input", help="JSON-файл с ответами опроса")
     p_survey.add_argument("--demo", action="store_true", help="Запуск с демо-данными")

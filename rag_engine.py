@@ -49,10 +49,7 @@ class RAGSystem:
         return doc_id
 
     def index_report(self, text: str, analysis_result: dict, source: str = "unknown") -> str:
-        """Индексирует проанализированный отчёт: текст + ключевые сущности из результата.
-
-        Сохраняет summary + extracted entities для более точного семантического поиска.
-        """
+        """Индексирует проанализированный отчёт: текст + ключевые сущности из результата."""
         json_data = analysis_result.get("json", {})
 
         actors = [a.get("name", a) if isinstance(a, dict) else str(a)

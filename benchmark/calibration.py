@@ -31,9 +31,7 @@ CHARTS_DIR = Path("charts")
 CHARTS_DIR.mkdir(exist_ok=True)
 
 
-# ─────────────────────────────────────────────
 #  1. Сбор данных для калибровки
-# ─────────────────────────────────────────────
 
 def generate_calibration_data(model_name: str = "gemma2:9b") -> list:
     """Прогоняет pipeline на тестовых отчётах, собирает (confidence, is_correct)."""
@@ -120,9 +118,7 @@ def generate_calibration_data(model_name: str = "gemma2:9b") -> list:
     return calibration_data
 
 
-# ─────────────────────────────────────────────
 #  2. Метрики калибровки
-# ─────────────────────────────────────────────
 
 def compute_calibration_metrics(confidences: np.ndarray, labels: np.ndarray,
                                  n_bins: int = 10) -> dict:
@@ -176,9 +172,7 @@ def compute_calibration_metrics(confidences: np.ndarray, labels: np.ndarray,
     }
 
 
-# ─────────────────────────────────────────────
 #  3. Рекалибровка
-# ─────────────────────────────────────────────
 
 def recalibrate(confidences: np.ndarray, labels: np.ndarray) -> dict:
     """Isotonic regression + Platt scaling рекалибровка."""
@@ -227,9 +221,7 @@ def recalibrate(confidences: np.ndarray, labels: np.ndarray) -> dict:
     return results
 
 
-# ─────────────────────────────────────────────
 #  Визуализации
-# ─────────────────────────────────────────────
 
 def plot_reliability_diagram(metrics: dict, title: str = "Overall",
                               output: str = "charts/reliability_diagram.png"):
@@ -311,9 +303,6 @@ def plot_recalibration_comparison(before: dict, iso_after: dict, platt_after: di
     print(f"  Сохранён: {output}")
 
 
-# ─────────────────────────────────────────────
-#  Main
-# ─────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Confidence Calibration Analysis")

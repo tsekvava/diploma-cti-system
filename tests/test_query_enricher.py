@@ -1,18 +1,8 @@
-"""
-Tests for QueryEnricher — enrichment of short CTI queries from MITRE ATT&CK DB.
-
-Tests cover:
-  - Query type detection (T-codes, G-codes, CVE, names)
-  - Technique enrichment (subtechniques, related groups)
-  - Group enrichment (aliases, techniques, software)
-  - Software enrichment
-  - Natural language query handling
-"""
+"""Tests for QueryEnricher — enrichment of short CTI queries from MITRE ATT&CK DB."""
 
 import pytest
 
 
-# ── Query type detection ─────────────────────────────────
 
 
 class TestDetectQueryType:
@@ -57,7 +47,6 @@ class TestDetectQueryType:
         assert detections == [] or all(d["type"] not in ("technique", "group_id") for d in detections)
 
 
-# ── Technique enrichment ─────────────────────────────────
 
 
 def _get_enrichment(result, etype=None):
@@ -99,7 +88,6 @@ class TestEnrichTechnique:
         assert data.get("found") is True
 
 
-# ── Group enrichment ─────────────────────────────────────
 
 
 class TestEnrichGroup:
@@ -128,7 +116,6 @@ class TestEnrichGroup:
         assert "Lazarus" in context or "G0032" in context
 
 
-# ── Software enrichment ──────────────────────────────────
 
 
 class TestEnrichSoftware:
@@ -146,7 +133,6 @@ class TestEnrichSoftware:
         assert len(techniques) > 0
 
 
-# ── Name-based search ────────────────────────────────────
 
 
 class TestNameBasedSearch:
@@ -164,7 +150,6 @@ class TestNameBasedSearch:
         assert result is not None
 
 
-# ── CVE enrichment ───────────────────────────────────────
 
 
 class TestEnrichCVE:

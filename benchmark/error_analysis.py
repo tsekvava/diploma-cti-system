@@ -61,7 +61,6 @@ SHORT_NAMES = {
 CATEGORIES = ["actors", "malware", "tools", "attack_patterns", "ioc"]
 
 
-# ── Helpers ──────────────────────────────────────────────
 
 
 def shorten(name: str) -> str:
@@ -140,7 +139,6 @@ def get_sets(entry: dict, truth: dict):
     return sets
 
 
-# ── Load data ────────────────────────────────────────────
 
 
 def load_data():
@@ -157,7 +155,6 @@ def load_data():
     return entries, truths
 
 
-# ── 1. TP/FP/FN stacked bar ─────────────────────────────
 
 
 def plot_tp_fp_fn_by_model(entries, truths):
@@ -208,7 +205,6 @@ def plot_tp_fp_fn_by_model(entries, truths):
     return model_stats
 
 
-# ── 2. TP/FP/FN by category ─────────────────────────────
 
 
 def plot_tp_fp_fn_by_category(entries, truths):
@@ -253,7 +249,6 @@ def plot_tp_fp_fn_by_category(entries, truths):
     print("  [+] 08_tp_fp_fn_by_category.png")
 
 
-# ── 3. Top FP / FN ──────────────────────────────────────
 
 
 def analyze_top_errors(entries, truths):
@@ -304,7 +299,6 @@ def analyze_top_errors(entries, truths):
     return fp_counter, fn_counter
 
 
-# ── 4. Hallucination detection ───────────────────────────
 
 
 def detect_hallucinations(entries):
@@ -361,7 +355,6 @@ def detect_hallucinations(entries):
     print("  [+] hallucination_rates.csv")
 
 
-# ── 5. Category heatmap per model ────────────────────────
 
 
 def plot_category_heatmap(entries, truths):
@@ -416,7 +409,6 @@ def plot_category_heatmap(entries, truths):
     print("  [+] 09_category_heatmap.png")
 
 
-# ── 6. Summary table ─────────────────────────────────────
 
 
 def generate_summary_table(entries, truths, model_stats):
@@ -445,7 +437,6 @@ def generate_summary_table(entries, truths, model_stats):
     print(f"\n  [+] error_analysis_summary.csv")
 
 
-# ── 7. FP/FN ratio per category bar chart ────────────────
 
 
 def plot_fp_fn_ratio(entries, truths):
@@ -495,7 +486,6 @@ def plot_fp_fn_ratio(entries, truths):
     print("  [+] 10_fp_fn_rates.png")
 
 
-# ── Main ─────────────────────────────────────────────────
 
 
 def main():

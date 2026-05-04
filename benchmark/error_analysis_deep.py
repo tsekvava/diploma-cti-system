@@ -34,9 +34,7 @@ REGEX_ARTIFACT_EXTENSIONS = {
 }
 
 
-# ─────────────────────────────────────────────
 #  Утилиты
-# ─────────────────────────────────────────────
 
 def normalize(text: str) -> str:
     """Нормализация для сравнения: lower, strip."""
@@ -79,9 +77,7 @@ def get_attack_patterns(data: dict) -> set:
     return s
 
 
-# ─────────────────────────────────────────────
 #  1. Классификация ошибок
-# ─────────────────────────────────────────────
 
 def classify_fp(entity: str, pred_data: dict, truth_data: dict, text: str) -> str:
     """Классифицирует тип ложноположительной ошибки."""
@@ -217,9 +213,7 @@ def analyze_errors(detailed_results: list, report_texts: dict) -> dict:
     return all_errors
 
 
-# ─────────────────────────────────────────────
 #  2. Jaccard similarity между моделями
-# ─────────────────────────────────────────────
 
 def jaccard_similarity(errors_df: pd.DataFrame, models: list) -> pd.DataFrame:
     """Матрица Jaccard similarity по множествам FP."""
@@ -237,9 +231,7 @@ def jaccard_similarity(errors_df: pd.DataFrame, models: list) -> pd.DataFrame:
     return pd.DataFrame(matrix, index=models, columns=models)
 
 
-# ─────────────────────────────────────────────
 #  Визуализации
-# ─────────────────────────────────────────────
 
 def plot_stacked_bar(errors_df: pd.DataFrame, models: list,
                      output: str = "charts/error_stacked_bar.png"):
@@ -369,9 +361,6 @@ def plot_jaccard_heatmap(jac_matrix: pd.DataFrame, output: str = "charts/jaccard
     print(f"  Сохранён: {output}")
 
 
-# ─────────────────────────────────────────────
-#  Main
-# ─────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Deep Error Analysis")

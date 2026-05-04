@@ -105,9 +105,7 @@ class ReportSummarizer:
             "Write a concise analytical summary of this threat report.\n\n{text}",
         )
 
-    # ──────────────────────────────────────────────
     #  ЭТАП 1: Regex-экстракция IoC
-    # ──────────────────────────────────────────────
 
     def _extract_ioc_regex(self, text: str) -> dict:
         """Фаза 1: детерминированная экстракция IoC."""
@@ -153,9 +151,7 @@ class ReportSummarizer:
 
         return {"indicators": indicators, "vulnerabilities": cves}
 
-    # ──────────────────────────────────────────────
     #  ЭТАП 2: LLM-экстракция сущностей
-    # ──────────────────────────────────────────────
 
     def _extract_entities_llm(self, text: str, internal_intel_context: str = "") -> dict:
         """Фаза 2: LLM извлекает семантические сущности с confidence."""
@@ -252,9 +248,7 @@ class ReportSummarizer:
 
         return sorted(seen.values(), key=lambda x: -x["confidence"])
 
-    # ──────────────────────────────────────────────
     #  ЭТАП 3: Нормализация к MITRE ATT&CK
-    # ──────────────────────────────────────────────
 
     def _normalize_entities(self, raw: dict) -> dict:
         """Фаза 3: нормализация всех сущностей через EntityNormalizer."""
@@ -267,32 +261,17 @@ class ReportSummarizer:
 
         return normalized
 
-    # ──────────────────────────────────────────────
     #  ЭТАП 4: Kill Chain маппинг
-    # ──────────────────────────────────────────────
 
     def _map_kill_chain(self, text: str) -> dict:
         """Фаза 4: маппинг текста на MITRE ATT&CK Kill Chain."""
         print("   [4/7] Kill Chain маппинг...")
         return self.mapper.map_text(text)
 
-    # ──────────────────────────────────────────────
     #  ЭТАП 5: Confidence Score (post-processing)
-    # ──────────────────────────────────────────────
 
     def _apply_confidence(self, normalized: dict, raw_confidence: dict, kill_chain: dict) -> dict:
-        """
-        Фаза 5: корректировка confidence на основе верификации.
-
-        Правила:
-          - IoC (regex): confidence = 100 (детерминированно)
-          - Нормализация exact match: +10
-          - Нормализация alias match: +5
-          - Нормализация fuzzy match: +0
-          - Не нормализовано: -10
-          - Kill Chain техника валидирована: +5 к технике
-          - Kill Chain техника не валидирована: -20 к технике
-        """
+        """Фаза 5: корректировка confidence на основе верификации."""
         print("   [5/7] Корректировка Confidence Score...")
 
         # Confidence для actors
@@ -369,9 +348,7 @@ class ReportSummarizer:
     def _clamp(value: int) -> int:
         return min(100, max(0, value))
 
-    # ──────────────────────────────────────────────
     #  ЭТАП 6: LLM-суммаризация
-    # ──────────────────────────────────────────────
 
     def _generate_summary(self, text: str) -> str:
         """Фаза 6: генерация краткого саммари на английском."""
@@ -402,9 +379,7 @@ class ReportSummarizer:
             print(f"         [!] Ошибка суммаризации: {e}")
             return ""
 
-    # ──────────────────────────────────────────────
     #  ЭТАП 7: Перевод и формирование записки
-    # ──────────────────────────────────────────────
 
     def _translate_and_format(self, summary_en: str, normalized: dict,
                                kill_chain: dict, overall_conf: int,
@@ -514,9 +489,7 @@ class ReportSummarizer:
         else:
             return "Very Low"
 
-    # ──────────────────────────────────────────────
     #  JSON-формат (для OpenCTI)
-    # ──────────────────────────────────────────────
 
     def _build_json_output(self, normalized: dict, kill_chain: dict,
                             overall_conf: int, summary_en: str,
@@ -609,9 +582,7 @@ class ReportSummarizer:
             "targeted_countries": normalized.get("targeted_countries", []),
         }
 
-    # ──────────────────────────────────────────────
     #  ОСНОВНОЙ МЕТОД
-    # ──────────────────────────────────────────────
 
     def process(self, text: str, source: str = "unknown", input_metadata: Optional[dict] = None, rag_context: str = "") -> dict:
         """
@@ -716,9 +687,7 @@ class ReportSummarizer:
             "processing_time": processing_time,
         }
 
-    # ──────────────────────────────────────────────
     #  Утилиты
-    # ──────────────────────────────────────────────
 
     @staticmethod
     def _chunk_text(text: str) -> list[str]:

@@ -1,9 +1,4 @@
-"""
-Internal intelligence sync from OpenCTI STIX JSON.
-
-Импортирует сущности в отдельный слой БД (intel_*),
-не перезаписывая базовые таблицы MITRE.
-"""
+"""Internal intelligence sync from OpenCTI STIX JSON."""
 
 from __future__ import annotations
 

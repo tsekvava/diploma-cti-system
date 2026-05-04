@@ -1,13 +1,4 @@
-"""
-Tests for InputLoader — multi-format report file loading.
-
-Tests cover:
-  - Plain text loading (txt, md, log)
-  - HTML parsing (tag stripping)
-  - LoadedReport dataclass fields
-  - Error handling for missing files
-  - Extension detection
-"""
+"""Tests for InputLoader — multi-format report file loading."""
 
 import sys
 import tempfile
@@ -29,7 +20,6 @@ from summarizer.input_loader import (
 )
 
 
-# ── Extension sets ───────────────────────────────────────
 
 
 class TestExtensionSets:
@@ -54,7 +44,6 @@ class TestExtensionSets:
         assert ".jpg" in IMAGE_EXTENSIONS
 
 
-# ── Text file loading ────────────────────────────────────
 
 
 class TestLoadTextFile:
@@ -88,7 +77,6 @@ class TestLoadTextFile:
         assert "КИИ" in result.text
 
 
-# ── HTML file loading ────────────────────────────────────
 
 
 class TestLoadHTMLFile:
@@ -105,7 +93,6 @@ class TestLoadHTMLFile:
         assert result.input_format == "html"
 
 
-# ── Error handling ───────────────────────────────────────
 
 
 class TestErrorHandling:
@@ -121,7 +108,6 @@ class TestErrorHandling:
             load_report_file(str(f))
 
 
-# ── LoadedReport dataclass ───────────────────────────────
 
 
 class TestLoadedReport:
@@ -140,7 +126,6 @@ class TestLoadedReport:
         assert isinstance(result.text, str)
 
 
-# ── Sample report loading ────────────────────────────────
 
 
 class TestSampleReports:

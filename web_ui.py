@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""
-CTI Pipeline — Web UI (Streamlit).
-
-Запуск:
-    streamlit run web_ui.py
-
-Страницы:
-    1. Анализ отчёта — загрузка файла или вставка текста, 7-этапный пайплайн
-    2. MITRE Enrichment — обогащение запросов из MITRE ATT&CK
-    3. Профиль APT/ПО — генерация профиля группы или ПО
-    4. Бенчмарк — графики и таблицы результатов
-"""
+"""CTI Pipeline — Web UI (Streamlit)."""
 
 import json
 import os
@@ -24,7 +13,6 @@ import pandas as pd
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
-# ─── Конфигурация страницы ───────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="CTI Pipeline",
@@ -33,7 +21,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ─── Sidebar: навигация ─────────────────────────────────────────────────────
 
 st.sidebar.title("CTI Pipeline")
 st.sidebar.caption("Автоматизированный анализ киберугроз")
@@ -53,7 +40,6 @@ ollama_host = st.sidebar.text_input("Ollama хост", value=os.environ.get("OLL
 use_rag = st.sidebar.checkbox("RAG (поиск похожих отчётов)", value=False)
 
 
-# ─── Вспомогательные функции ─────────────────────────────────────────────────
 
 @st.cache_resource
 def get_enricher():
@@ -66,7 +52,6 @@ def set_ollama_env(host):
     os.environ["OLLAMA_HOST"] = host
 
 
-# ─── Страница 1: Анализ отчёта ──────────────────────────────────────────────
 
 def page_analyze():
     st.header("Анализ отчёта")
@@ -188,7 +173,6 @@ def page_analyze():
             except Exception:
                 pass
 
-        # ── Отображение результатов ──
         st.markdown("---")
         _display_analysis_result(result, export_stix, tlp)
 
@@ -328,7 +312,6 @@ def _display_analysis_result(result, export_stix=False, tlp="TLP:AMBER"):
             st.error(f"Ошибка STIX экспорта: {e}")
 
 
-# ─── Страница 2: MITRE Enrichment ───────────────────────────────────────────
 
 def page_enrich():
     st.header("MITRE ATT&CK Enrichment")
@@ -465,7 +448,6 @@ def _display_enrichment(enr):
                         st.markdown(f"- {g}")
 
 
-# ─── Страница 3: Профиль APT/ПО ────────────────────────────────────────────
 
 def page_profile():
     st.header("Профиль APT-группы / ПО")
@@ -538,7 +520,6 @@ def page_profile():
             st.json(result)
 
 
-# ─── Страница 4: Бенчмарк ──────────────────────────────────────────────────
 
 def page_benchmark():
     st.header("Результаты бенчмарка")
@@ -618,7 +599,6 @@ def page_benchmark():
             st.dataframe(df_err, use_container_width=True, hide_index=True)
 
 
-# ─── Роутинг ────────────────────────────────────────────────────────────────
 
 if page == "Анализ отчёта":
     page_analyze()

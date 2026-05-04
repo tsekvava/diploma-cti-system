@@ -287,10 +287,7 @@ class EntityNormalizer:
         }
 
     def normalize_software(self, name: str) -> dict:
-        """
-        Нормализует имя малвари или инструмента к каталогу MITRE Software.
-        Логика аналогична normalize_threat_actor.
-        """
+        """Нормализует имя малвари или инструмента к каталогу MITRE Software."""
         original = name.strip()
         name_lower = original.lower()
 
@@ -353,10 +350,7 @@ class EntityNormalizer:
         }
 
     def validate_technique_id(self, technique_id: str) -> Optional[dict]:
-        """
-        Проверяет существование technique ID в справочнике.
-        Возвращает полную информацию о технике или None если не найдена.
-        """
+        """Проверяет существование technique ID в справочнике."""
         tid = technique_id.strip().upper()
         if tid in self._techniques:
             return self._techniques[tid]
@@ -395,12 +389,7 @@ class EntityNormalizer:
             conn.close()
 
     def normalize_all(self, extraction_result: dict) -> dict:
-        """
-        Нормализует все сущности в результате экстракции.
-
-        Input:  {"threat_actor": ["HIDDEN COBRA", "Lazarus"], "malware": ["CobaltStrike"], ...}
-        Output: {"threat_actor": [{name, mitre_id, normalized, ...}], ...}
-        """
+        """Нормализует все сущности в результате экстракции."""
         result = {}
 
         # Threat actors
