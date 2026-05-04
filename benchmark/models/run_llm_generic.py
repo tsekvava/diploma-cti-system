@@ -26,7 +26,12 @@ REGEX_PATTERNS = {
     "cve": r"CVE-\d{4}-\d{4,7}",
 }
 
-IGNORE_EXTENSIONS = {".exe", ".dll", ".sys", ".png", ".jpg", ".js", ".html", ".json", ".css"}
+IGNORE_EXTENSIONS = {
+    ".exe", ".dll", ".sys", ".png", ".jpg", ".js", ".html", ".json", ".css",
+    ".msi", ".hta", ".crt", ".log", ".txt", ".reg", ".bat", ".ps1", ".vbs",
+    ".xml", ".yml", ".yaml", ".ini", ".cfg", ".php", ".jpeg", ".gif",
+    ".svg", ".woff", ".ttf",
+}
 
 # Оптимизированный промпт из prompts/extract_entities.txt
 SYSTEM_PROMPT = """You are a Cyber Threat Intelligence (CTI) analyst. Extract structured threat intelligence entities from the provided text.

@@ -1,0 +1,30 @@
+{
+  "NORM": {
+    "delta_f1": -0.018022222222222217,
+    "full_mean": 0.4128555555555556,
+    "ablated_mean": 0.4308777777777778,
+    "p_value": 0.0390625,
+    "significant": "True"
+  },
+  "KC": {
+    "delta_f1": 0.03067777777777786,
+    "full_mean": 0.4128555555555556,
+    "ablated_mean": 0.3821777777777777,
+    "p_value": 1.0,
+    "significant": "False"
+  },
+  "CONF": {
+    "delta_f1": 0.002333333333333354,
+    "full_mean": 0.4128555555555556,
+    "ablated_mean": 0.41052222222222223,
+    "p_value": 0.546875,
+    "significant": "False"
+  },
+  "CHUNK": {
+    "delta_f1": -0.006111111111111067,
+    "full_mean": 0.4128555555555556,
+    "ablated_mean": 0.41896666666666665,
+    "p_value": 0.03125,
+    "significant": "True"
+  }
+}

@@ -51,6 +51,9 @@ REGEX_PATTERNS = {
 IGNORE_EXTENSIONS = {
     ".js", ".css", ".png", ".jpg", ".jpeg", ".gif",
     ".svg", ".woff", ".ttf", ".html", ".php",
+    ".exe", ".dll", ".sys", ".msi", ".hta", ".crt",
+    ".log", ".txt", ".reg", ".bat", ".ps1", ".vbs",
+    ".json", ".xml", ".yml", ".yaml", ".ini", ".cfg",
 }
 IGNORE_DOMAINS = {
     "sophos.com", "google.com", "microsoft.com", "schema.org",

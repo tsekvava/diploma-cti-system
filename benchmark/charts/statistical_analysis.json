@@ -1,0 +1,96 @@
+{
+  "bootstrap_ci": {
+    "alientelligence/cybersecuritythreatanalysisv2": {
+      "mean": 0.4851666666666666,
+      "std": 0.17018696907943465,
+      "ci_lower": 0.35736827621026335,
+      "ci_upper": 0.5858644425162488,
+      "n": 9,
+      "method": "BCa bootstrap"
+    },
+    "deepseek-v2:16b": {
+      "mean": 0.4795777777777778,
+      "std": 0.17357663551026023,
+      "ci_lower": 0.3471163186735408,
+      "ci_upper": 0.5792570984455331,
+      "n": 9,
+      "method": "BCa bootstrap"
+    },
+    "gemma2:9b": {
+      "mean": 0.49475555555555556,
+      "std": 0.1674678683018932,
+      "ci_lower": 0.36156307228725715,
+      "ci_upper": 0.5903666666666667,
+      "n": 9,
+      "method": "BCa bootstrap"
+    },
+    "glm4:9b": {
+      "mean": 0.44272222222222224,
+      "std": 0.17407701218954647,
+      "ci_lower": 0.3181880773356211,
+      "ci_upper": 0.5507346990172112,
+      "n": 9,
+      "method": "BCa bootstrap"
+    },
+    "llama3.1:8b": {
+      "mean": 0.4762888888888889,
+      "std": 0.161723862352842,
+      "ci_lower": 0.34882208330468395,
+      "ci_upper": 0.5687609288318958,
+      "n": 9,
+      "method": "BCa bootstrap"
+    },
+    "mistral:7b": {
+      "mean": 0.4643666666666666,
+      "std": 0.1837355466726869,
+      "ci_lower": 0.32981111111111105,
+      "ci_upper": 0.5756997486462039,
+      "n": 9,
+      "method": "BCa bootstrap"
+    },
+    "qingmian/qwen2.5-14b-cybersecurity": {
+      "mean": 0.4550666666666667,
+      "std": 0.18902213862108555,
+      "ci_lower": 0.31037777777777775,
+      "ci_upper": 0.5633530450130778,
+      "n": 9,
+      "method": "BCa bootstrap"
+    },
+    "qwen2.5:14b": {
+      "mean": 0.48952222222222225,
+      "std": 0.18060904848612025,
+      "ci_lower": 0.3570748566715584,
+      "ci_upper": 0.5987269733164838,
+      "n": 9,
+      "method": "BCa bootstrap"
+    },
+    "qwen2.5:7b": {
+      "mean": 0.4549,
+      "std": 0.16737406542764557,
+      "ci_lower": 0.3326330400045193,
+      "ci_upper": 0.5550453515609416,
+      "n": 9,
+      "method": "BCa bootstrap"
+    }
+  },
+  "friedman": {
+    "chi2": 28.155844155844182,
+    "p_value": 0.00044550521298946603,
+    "avg_ranks": {
+      "alientelligence/cybersecuritythreatanalysisv2": 3.5,
+      "deepseek-v2:16b": 4.444444444444445,
+      "gemma2:9b": 2.7222222222222223,
+      "glm4:9b": 7.888888888888889,
+      "llama3.1:8b": 5.166666666666667,
+      "mistral:7b": 5.555555555555555,
+      "qingmian/qwen2.5-14b-cybersecurity": 6.222222222222222,
+      "qwen2.5:14b": 3.111111111111111,
+      "qwen2.5:7b": 6.388888888888889
+    },
+    "critical_difference": 4.0046647799784685,
+    "k": 9,
+    "N": 9
+  },
+  "bonferroni_alpha": 0.001388888888888889,
+  "metric": "F1_overall"
+}

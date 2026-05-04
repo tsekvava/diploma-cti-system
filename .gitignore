@@ -1,40 +1,66 @@
+# ───── Виртуальные окружения и сборки ─────
 venv/
 env/
+.venv/
 .env
 .env.local
 opencti/.env
 **/.env
 .env.*
 
+# ───── IDE и системные файлы ─────
 .idea/
+.vscode/
 .DS_Store
 **/.DS_Store
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
+# ───── Runtime артефакты ─────
 chroma_db/
+*.db-wal
+*.db-shm
+*.log
 
+# ───── Веса моделей и LoRA-адаптеры (большие файлы) ─────
 *.gguf
 *.bin
+*.safetensors
 finetuning/diploma_filter_adapter/
 
-# Внутренние документы (не для репозитория)
+# ───── Внутренние документы и черновики (не для публичного репо) ─────
 PLAN.md
 MEETING_NOTES.md
 GOOGLE_FORM_INSTRUCTIONS.md
 RESEARCH_PROMPT.md
+*.docx
+*.pdf
 
-# Временные STIX бандлы (результаты тестовых прогонов)
+# ───── Временные STIX-бандлы (результаты тестовых прогонов) ─────
 stix_bundle_*.json
 
-# Claude Code / AI assistant artifacts
+# ───── Claude Code / AI-assistant артефакты ─────
 .claude/
 CLAUDE.md
 
-# SQLite WAL/SHM (runtime, не нужны в репо)
-*.db-wal
-*.db-shm
+# ───── Папки с черновиками ВКР и старым тестингом ─────
+thesis/
+testing/
 
-# venv / pytest cache
-.pytest_cache/
-venv/
+# ───── Логи и shell-скрипты прогонов бенчмарка ─────
+benchmark/run_*.log
+benchmark/run_*.sh
+
+# ───── Тяжёлые detailed-JSON результаты бенчмарка (>10 МБ) ─────
+benchmark/*_detailed.json
+benchmark/calibration_data.json
+
+# ───── Архивы ─────
+*.zip
+*.tar
+*.tar.gz

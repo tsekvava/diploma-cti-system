@@ -77,7 +77,7 @@ def normalize_entity(text: str) -> str:
 
 
 def calculate_f1_set(pred_set: set, truth_set: set) -> tuple:
-    """Считает P/R/F1 для двух множеств."""
+    """Считает P/R/F1 для двух множеств (strict matching)."""
     if not truth_set:
         return (0.0, 0.0, 0.0)
 
@@ -90,6 +90,98 @@ def calculate_f1_set(pred_set: set, truth_set: set) -> tuple:
     f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
     return (round(precision, 4), round(recall, 4), round(f1, 4))
+
+
+def calculate_f1_fuzzy(pred_set: set, truth_set: set, threshold: int = 80) -> tuple:
+    """Считает P/R/F1 с fuzzy matching (RapidFuzz token_sort_ratio).
+
+    Для каждого pred ищем лучший match в truth. Если score >= threshold → TP.
+    Каждый truth-элемент может быть сопоставлен не более одного раза (greedy).
+    """
+    if not truth_set:
+        return (0.0, 0.0, 0.0)
+    if not pred_set:
+        return (0.0, 0.0, 0.0)
+
+    from rapidfuzz import fuzz
+
+    pred_list = list(pred_set)
+    truth_list = list(truth_set)
+    matched_truth = set()
+    tp = 0
+
+    # Собираем все пары (pred_idx, truth_idx, score) и сортируем по score desc
+    pairs = []
+    for i, p in enumerate(pred_list):
+        for j, t in enumerate(truth_list):
+            score = fuzz.token_sort_ratio(p, t)
+            if score >= threshold:
+                pairs.append((score, i, j))
+    pairs.sort(reverse=True)
+
+    matched_pred = set()
+    for score, i, j in pairs:
+        if i not in matched_pred and j not in matched_truth:
+            tp += 1
+            matched_pred.add(i)
+            matched_truth.add(j)
+
+    fp = len(pred_set) - tp
+    fn = len(truth_set) - tp
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+
+    return (round(precision, 4), round(recall, 4), round(f1, 4))
+
+
+def _get_normalizer():
+    """Lazy-load EntityNormalizer (singleton)."""
+    if not hasattr(_get_normalizer, "_instance"):
+        try:
+            from knowledge_base.normalizer import EntityNormalizer
+            _get_normalizer._instance = EntityNormalizer()
+        except Exception:
+            _get_normalizer._instance = None
+    return _get_normalizer._instance
+
+
+def normalize_via_mitre(name: str, category: str) -> str:
+    """Нормализует имя сущности через EntityNormalizer → MITRE ID или canonical name."""
+    norm = _get_normalizer()
+    if norm is None:
+        return normalize_entity(name)
+
+    name_clean = name.strip()
+    try:
+        if category in ("threat_actor",):
+            result = norm.normalize_threat_actor(name_clean)
+        elif category in ("malware", "tools"):
+            result = norm.normalize_software(name_clean)
+        else:
+            return normalize_entity(name)
+
+        if result and result.get("normalized"):
+            # Используем MITRE ID если есть, иначе каноническое имя
+            mitre_id = result.get("mitre_id", "")
+            if mitre_id:
+                return mitre_id.lower()
+            return result.get("name", name_clean).lower().strip()
+    except Exception:
+        pass
+    return normalize_entity(name)
+
+
+def get_entity_set_normalized(data: dict, keys: list, category: str) -> set:
+    """Извлекает множество сущностей, нормализованных через MITRE (canonical names/IDs)."""
+    s = set()
+    for key in keys:
+        for item in data.get(key, []):
+            norm = normalize_via_mitre(str(item), category)
+            if len(norm) > 2:
+                s.add(norm)
+    return s
 
 
 def get_entity_set(data: dict, keys: list) -> set:
@@ -154,13 +246,18 @@ def get_attack_pattern_set(data: dict) -> set:
 
 def calculate_metrics_detailed(pred: dict, truth: dict) -> dict:
     """
-    Считает метрики по категориям:
+    Считает метрики по категориям в трёх протоколах: strict, fuzzy, normalized.
+
+    Категории:
       - actors: threat_actor
       - malware: malware
       - tools: tools
       - attack_patterns: MITRE ID + текстовые названия
       - ioc: indicators (IP, domain, hash)
       - overall: все вместе
+
+    Возвращает dict с ключом "strict" (для обратной совместимости — основной).
+    Дополнительно: "fuzzy" и "normalized" протоколы.
     """
     categories = {
         "actors": (["threat_actor"], ["threat_actor"]),
@@ -168,28 +265,24 @@ def calculate_metrics_detailed(pred: dict, truth: dict) -> dict:
         "tools": (["tools"], ["tools"]),
     }
 
+    # --- Протокол 1: Strict (оригинальный) ---
     results = {}
-
-    # По категориям (actors, malware, tools)
     for cat_name, (pred_keys, truth_keys) in categories.items():
         pred_set = get_entity_set(pred, pred_keys)
         truth_set = get_entity_set(truth, truth_keys)
         p, r, f1 = calculate_f1_set(pred_set, truth_set)
         results[cat_name] = {"precision": p, "recall": r, "f1": f1}
 
-    # Attack patterns — специальная обработка через MITRE ID
     pred_ap = get_attack_pattern_set(pred)
     truth_ap = get_attack_pattern_set(truth)
     p, r, f1 = calculate_f1_set(pred_ap, truth_ap)
     results["attack_patterns"] = {"precision": p, "recall": r, "f1": f1}
 
-    # IoC
     pred_ioc = get_ioc_set(pred)
     truth_ioc = get_ioc_set(truth)
     p, r, f1 = calculate_f1_set(pred_ioc, truth_ioc)
     results["ioc"] = {"precision": p, "recall": r, "f1": f1}
 
-    # Overall (всё вместе)
     all_pred = (
         get_entity_set(pred, ["threat_actor", "malware", "tools"])
         | get_attack_pattern_set(pred)
@@ -203,18 +296,77 @@ def calculate_metrics_detailed(pred: dict, truth: dict) -> dict:
     p, r, f1 = calculate_f1_set(all_pred, all_truth)
     results["overall"] = {"precision": p, "recall": r, "f1": f1}
 
-    return results
+    # --- Протокол 2: Fuzzy (RapidFuzz token_sort_ratio >= 80) ---
+    fuzzy = {}
+    for cat_name, (pred_keys, truth_keys) in categories.items():
+        pred_set = get_entity_set(pred, pred_keys)
+        truth_set = get_entity_set(truth, truth_keys)
+        p, r, f1 = calculate_f1_fuzzy(pred_set, truth_set, threshold=80)
+        fuzzy[cat_name] = {"precision": p, "recall": r, "f1": f1}
+
+    # Attack patterns и IoC — strict (T-коды и IP/хеши должны совпадать точно)
+    fuzzy["attack_patterns"] = results["attack_patterns"]
+    fuzzy["ioc"] = results["ioc"]
+
+    # Overall fuzzy: семантические сущности fuzzy + IoC/AP strict
+    p, r, f1 = calculate_f1_fuzzy(all_pred, all_truth, threshold=80)
+    fuzzy["overall"] = {"precision": p, "recall": r, "f1": f1}
+
+    # --- Протокол 3: Normalized (через EntityNormalizer → MITRE ID) ---
+    normalized_eval = {}
+    cat_to_norm = {"actors": "threat_actor", "malware": "malware", "tools": "tools"}
+    for cat_name, (pred_keys, truth_keys) in categories.items():
+        norm_cat = cat_to_norm.get(cat_name, cat_name)
+        pred_set_n = get_entity_set_normalized(pred, pred_keys, norm_cat)
+        truth_set_n = get_entity_set_normalized(truth, truth_keys, norm_cat)
+        p, r, f1 = calculate_f1_set(pred_set_n, truth_set_n)
+        normalized_eval[cat_name] = {"precision": p, "recall": r, "f1": f1}
+
+    normalized_eval["attack_patterns"] = results["attack_patterns"]
+    normalized_eval["ioc"] = results["ioc"]
+
+    all_pred_n = (
+        get_entity_set_normalized(pred, ["threat_actor"], "threat_actor")
+        | get_entity_set_normalized(pred, ["malware", "tools"], "malware")
+        | get_attack_pattern_set(pred)
+        | get_ioc_set(pred)
+    )
+    all_truth_n = (
+        get_entity_set_normalized(truth, ["threat_actor"], "threat_actor")
+        | get_entity_set_normalized(truth, ["malware", "tools"], "malware")
+        | get_attack_pattern_set(truth)
+        | get_ioc_set(truth)
+    )
+    p, r, f1 = calculate_f1_set(all_pred_n, all_truth_n)
+    normalized_eval["overall"] = {"precision": p, "recall": r, "f1": f1}
+
+    return {
+        "strict": results,
+        "fuzzy": fuzzy,
+        "normalized": normalized_eval,
+        # Для обратной совместимости — основные метрики из strict
+        **results,
+    }
 
 
 # --- Запуск моделей ---
 
-def run_llm_model(text: str, model_name: str) -> tuple:
-    """Запускает LLM-модель и возвращает (результат, время)."""
-    from models.run_llm_generic import extract_with_model
+def run_llm_model(text: str, model_name: str, full_pipeline: bool = False) -> tuple:
+    """Запускает LLM-модель и возвращает (результат, время).
 
-    start = time.time()
-    result = extract_with_model(text, model_name=model_name)
-    duration = time.time() - start
+    Args:
+        full_pipeline: если True — используем полный пайплайн (Normalizer + AttackMapper)
+    """
+    if full_pipeline:
+        from models.run_full_pipeline import extract_full_pipeline
+        start = time.time()
+        result = extract_full_pipeline(text, model_name=model_name)
+        duration = time.time() - start
+    else:
+        from models.run_llm_generic import extract_with_model
+        start = time.time()
+        result = extract_with_model(text, model_name=model_name)
+        duration = time.time() - start
     return result, duration
 
 
@@ -267,6 +419,11 @@ def main():
         help="Comma-separated list of Ollama model names (default: all configured models)",
     )
     parser.add_argument(
+        "--full-pipeline",
+        action="store_true",
+        help="Use full pipeline (Normalizer + AttackMapper) instead of Hybrid (Regex + LLM only)",
+    )
+    parser.add_argument(
         "--skip-baselines",
         action="store_true",
         help="Skip SecureBERT and GLiNER baselines",
@@ -285,9 +442,11 @@ def main():
     else:
         llm_models = DEFAULT_LLM_MODELS
 
+    mode = "Full Pipeline" if args.full_pipeline else "Hybrid (Regex+LLM)"
     print("=" * 70)
     print("MULTI-MODEL CTI BENCHMARK")
     print(f"Дата: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"Режим: {mode}")
     print(f"Датасеты: {len(TASKS)}")
     print(f"LLM модели: {len(llm_models)}")
     print("=" * 70)
@@ -329,33 +488,49 @@ def main():
                 truth = json.load(f)
 
             try:
-                result, duration = run_llm_model(text, model_name)
+                result, duration = run_llm_model(text, model_name, full_pipeline=args.full_pipeline)
                 metrics = calculate_metrics_detailed(result, truth)
 
+                strict = metrics["strict"]
+                fuzzy = metrics["fuzzy"]
+                norm_eval = metrics["normalized"]
                 row = {
-                    "Method": f"Hybrid+{model_name}",
+                    "Method": f"{'FullPipeline' if args.full_pipeline else 'Hybrid'}+{model_name}",
                     "Model": model_name,
                     "Type": "LLM",
                     "Dataset": dataset_name,
                     "Time_sec": round(duration, 1),
-                    "F1_overall": metrics["overall"]["f1"],
-                    "P_overall": metrics["overall"]["precision"],
-                    "R_overall": metrics["overall"]["recall"],
-                    "F1_actors": metrics["actors"]["f1"],
-                    "F1_malware": metrics["malware"]["f1"],
-                    "F1_tools": metrics["tools"]["f1"],
-                    "F1_ioc": metrics["ioc"]["f1"],
-                    "F1_attack_patterns": metrics["attack_patterns"]["f1"],
+                    # Strict protocol
+                    "F1_overall": strict["overall"]["f1"],
+                    "P_overall": strict["overall"]["precision"],
+                    "R_overall": strict["overall"]["recall"],
+                    "F1_actors": strict["actors"]["f1"],
+                    "F1_malware": strict["malware"]["f1"],
+                    "F1_tools": strict["tools"]["f1"],
+                    "F1_ioc": strict["ioc"]["f1"],
+                    "F1_attack_patterns": strict["attack_patterns"]["f1"],
+                    # Fuzzy protocol
+                    "F1_fuzzy_overall": fuzzy["overall"]["f1"],
+                    "F1_fuzzy_actors": fuzzy["actors"]["f1"],
+                    "F1_fuzzy_malware": fuzzy["malware"]["f1"],
+                    "F1_fuzzy_tools": fuzzy["tools"]["f1"],
+                    # Normalized protocol (MITRE canonical)
+                    "F1_norm_overall": norm_eval["overall"]["f1"],
+                    "F1_norm_actors": norm_eval["actors"]["f1"],
+                    "F1_norm_malware": norm_eval["malware"]["f1"],
+                    "F1_norm_tools": norm_eval["tools"]["f1"],
                 }
                 all_results.append(row)
 
-                print(f"    F1={metrics['overall']['f1']:.3f} "
-                      f"(P={metrics['overall']['precision']:.3f}, R={metrics['overall']['recall']:.3f}) "
+                print(f"    Strict:     F1={strict['overall']['f1']:.3f} "
+                      f"(P={strict['overall']['precision']:.3f}, R={strict['overall']['recall']:.3f}) "
                       f"Time={duration:.1f}s")
-                print(f"    actors={metrics['actors']['f1']:.3f} "
-                      f"malware={metrics['malware']['f1']:.3f} "
-                      f"tools={metrics['tools']['f1']:.3f} "
-                      f"ioc={metrics['ioc']['f1']:.3f}")
+                print(f"    Fuzzy:      F1={fuzzy['overall']['f1']:.3f}")
+                print(f"    Normalized: F1={norm_eval['overall']['f1']:.3f}")
+                print(f"    actors={strict['actors']['f1']:.3f} "
+                      f"malware={strict['malware']['f1']:.3f} "
+                      f"tools={strict['tools']['f1']:.3f} "
+                      f"ioc={strict['ioc']['f1']:.3f}")
 
                 # Сохраняем детальные результаты (для отладки)
                 detailed_results.append({
@@ -369,19 +544,18 @@ def main():
             except Exception as e:
                 print(f"    [ERROR] {e}")
                 all_results.append({
-                    "Method": f"Hybrid+{model_name}",
+                    "Method": f"{'FullPipeline' if args.full_pipeline else 'Hybrid'}+{model_name}",
                     "Model": model_name,
                     "Type": "LLM",
                     "Dataset": dataset_name,
                     "Time_sec": 0,
-                    "F1_overall": 0,
-                    "P_overall": 0,
-                    "R_overall": 0,
-                    "F1_actors": 0,
-                    "F1_malware": 0,
-                    "F1_tools": 0,
-                    "F1_ioc": 0,
-                    "F1_attack_patterns": 0,
+                    "F1_overall": 0, "P_overall": 0, "R_overall": 0,
+                    "F1_actors": 0, "F1_malware": 0, "F1_tools": 0,
+                    "F1_ioc": 0, "F1_attack_patterns": 0,
+                    "F1_fuzzy_overall": 0, "F1_fuzzy_actors": 0,
+                    "F1_fuzzy_malware": 0, "F1_fuzzy_tools": 0,
+                    "F1_norm_overall": 0, "F1_norm_actors": 0,
+                    "F1_norm_malware": 0, "F1_norm_tools": 0,
                 })
 
     # --- Baselines ---
@@ -412,26 +586,38 @@ def main():
                     result, duration = baseline_fn(text)
                     metrics = calculate_metrics_detailed(result, truth)
 
+                    strict = metrics["strict"]
+                    fuzzy = metrics["fuzzy"]
+                    norm_eval = metrics["normalized"]
                     row = {
                         "Method": baseline_name,
                         "Model": baseline_name,
                         "Type": "Baseline",
                         "Dataset": dataset_name,
                         "Time_sec": round(duration, 1),
-                        "F1_overall": metrics["overall"]["f1"],
-                        "P_overall": metrics["overall"]["precision"],
-                        "R_overall": metrics["overall"]["recall"],
-                        "F1_actors": metrics["actors"]["f1"],
-                        "F1_malware": metrics["malware"]["f1"],
-                        "F1_tools": metrics["tools"]["f1"],
-                        "F1_ioc": metrics["ioc"]["f1"],
-                        "F1_attack_patterns": metrics["attack_patterns"]["f1"],
+                        "F1_overall": strict["overall"]["f1"],
+                        "P_overall": strict["overall"]["precision"],
+                        "R_overall": strict["overall"]["recall"],
+                        "F1_actors": strict["actors"]["f1"],
+                        "F1_malware": strict["malware"]["f1"],
+                        "F1_tools": strict["tools"]["f1"],
+                        "F1_ioc": strict["ioc"]["f1"],
+                        "F1_attack_patterns": strict["attack_patterns"]["f1"],
+                        "F1_fuzzy_overall": fuzzy["overall"]["f1"],
+                        "F1_fuzzy_actors": fuzzy["actors"]["f1"],
+                        "F1_fuzzy_malware": fuzzy["malware"]["f1"],
+                        "F1_fuzzy_tools": fuzzy["tools"]["f1"],
+                        "F1_norm_overall": norm_eval["overall"]["f1"],
+                        "F1_norm_actors": norm_eval["actors"]["f1"],
+                        "F1_norm_malware": norm_eval["malware"]["f1"],
+                        "F1_norm_tools": norm_eval["tools"]["f1"],
                     }
                     all_results.append(row)
 
-                    print(f"    F1={metrics['overall']['f1']:.3f} "
-                          f"(P={metrics['overall']['precision']:.3f}, R={metrics['overall']['recall']:.3f}) "
+                    print(f"    Strict: F1={strict['overall']['f1']:.3f} "
+                          f"(P={strict['overall']['precision']:.3f}, R={strict['overall']['recall']:.3f}) "
                           f"Time={duration:.1f}s")
+                    print(f"    Normalized: F1={norm_eval['overall']['f1']:.3f}")
 
                 except Exception as e:
                     print(f"    [ERROR] {baseline_name}: {e}")
@@ -441,14 +627,11 @@ def main():
                         "Type": "Baseline",
                         "Dataset": dataset_name,
                         "Time_sec": 0,
-                        "F1_overall": 0,
-                        "P_overall": 0,
-                        "R_overall": 0,
-                        "F1_actors": 0,
-                        "F1_malware": 0,
-                        "F1_tools": 0,
-                        "F1_ioc": 0,
-                        "F1_attack_patterns": 0,
+                        "F1_overall": 0, "P_overall": 0, "R_overall": 0,
+                        "F1_actors": 0, "F1_malware": 0, "F1_tools": 0,
+                        "F1_ioc": 0, "F1_attack_patterns": 0,
+                        "F1_fuzzy_overall": 0, "F1_fuzzy_actors": 0,
+                        "F1_fuzzy_malware": 0, "F1_fuzzy_tools": 0,
                     })
 
     # --- Сводка ---
@@ -471,9 +654,43 @@ def main():
         "F1_malware": "mean",
         "F1_tools": "mean",
         "F1_ioc": "mean",
+        "F1_fuzzy_overall": "mean",
     }).round(3).sort_values("F1_overall", ascending=False)
 
     print(summary.to_string())
+
+    # Macro-averaged F1 (среднее по категориям, без дисбаланса)
+    print("\n\n" + "=" * 70)
+    print("MACRO-AVERAGED F1 (основная метрика для ВКР)")
+    print("=" * 70)
+    cat_cols = ["F1_actors", "F1_malware", "F1_tools", "F1_ioc", "F1_attack_patterns"]
+    df["F1_macro"] = df[cat_cols].mean(axis=1)
+    df["F1_macro_sem"] = df[["F1_actors", "F1_malware", "F1_tools"]].mean(axis=1)
+
+    macro_summary = df.groupby("Method").agg({
+        "F1_overall": "mean",
+        "F1_macro": "mean",
+        "F1_macro_sem": "mean",
+    }).round(3).sort_values("F1_macro", ascending=False)
+    macro_summary.columns = ["Micro_F1", "Macro_F1 (all)", "Macro_F1 (semantic)"]
+    print(macro_summary.to_string())
+
+    # Сравнение протоколов
+    print("\n\n" + "=" * 70)
+    print("СРАВНЕНИЕ ПРОТОКОЛОВ EVALUATION")
+    print("=" * 70)
+    norm_col = "F1_norm_overall" if "F1_norm_overall" in df.columns else "F1_overall"
+    protocol_cmp = df.groupby("Method").agg({
+        "F1_overall": "mean",
+        "F1_fuzzy_overall": "mean",
+        norm_col: "mean",
+        "F1_macro": "mean",
+    }).round(3).sort_values("F1_macro", ascending=False)
+    if norm_col == "F1_norm_overall":
+        protocol_cmp.columns = ["Strict", "Fuzzy", "Normalized", "Macro"]
+    else:
+        protocol_cmp.columns = ["Strict", "Fuzzy", "Normalized(=Strict)", "Macro"]
+    print(protocol_cmp.to_string())
 
     # Сохраняем
     df.to_csv(args.output, index=False)
